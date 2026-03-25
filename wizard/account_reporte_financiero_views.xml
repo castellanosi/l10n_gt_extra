@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ==================== ESTADO DE RESULTADOS ==================== -->
+    <record id="reporte_estado_resultados_wizard_view_form" model="ir.ui.view">
+        <field name="name">l10n_gt_extra.reporte_estado_resultados.wizard</field>
+        <field name="model">l10n_gt_extra.reporte_estado_resultados.wizard</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Estado de Resultados">
+                <group>
+                    <group>
+                        <field name="fecha_desde"/>
+                        <field name="fecha_hasta"/>
+                    </group>
+                    <group>
+                        <field name="name" invisible="1"/>
+                        <field name="archivo" readonly="1" filename="name"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="print_report" string="Reporte PDF" type="object" class="oe_highlight"/>
+                    <button name="print_report_excel" string="Reporte Excel" type="object" class="oe_highlight"/>
+                    <button special="cancel" string="Cancelar" class="oe_link"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="reporte_estado_resultados_wizard_action" model="ir.actions.act_window">
+        <field name="name">Estado de Resultados</field>
+        <field name="res_model">l10n_gt_extra.reporte_estado_resultados.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="reporte_estado_resultados_wizard_report" model="ir.actions.report">
+        <field name="name">l10n_gt_extra.reporte_estado_resultados</field>
+        <field name="model">l10n_gt_extra.reporte_estado_resultados.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">l10n_gt_extra.reporte_estado_resultados</field>
+        <field name="report_file">l10n_gt_extra.reporte_estado_resultados</field>
+    </record>
+
+    <menuitem id="reporte_estado_resultados_wizard_menu"
+              action="reporte_estado_resultados_wizard_action"
+              parent="menu_informes"/>
+
+    <!-- ==================== BALANCE GENERAL ==================== -->
+    <record id="reporte_balance_general_wizard_view_form" model="ir.ui.view">
+        <field name="name">l10n_gt_extra.reporte_balance_general.wizard</field>
+        <field name="model">l10n_gt_extra.reporte_balance_general.wizard</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Balance General">
+                <group>
+                    <group>
+                        <field name="fecha_hasta"/>
+                        <field name="fecha_desde_er"/>
+                    </group>
+                    <group>
+                        <field name="name" invisible="1"/>
+                        <field name="archivo" readonly="1" filename="name"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="print_report" string="Reporte PDF" type="object" class="oe_highlight"/>
+                    <button name="print_report_excel" string="Reporte Excel" type="object" class="oe_highlight"/>
+                    <button special="cancel" string="Cancelar" class="oe_link"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="reporte_balance_general_wizard_action" model="ir.actions.act_window">
+        <field name="name">Balance General</field>
+        <field name="res_model">l10n_gt_extra.reporte_balance_general.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="reporte_balance_general_wizard_report" model="ir.actions.report">
+        <field name="name">l10n_gt_extra.reporte_balance_general</field>
+        <field name="model">l10n_gt_extra.reporte_balance_general.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">l10n_gt_extra.reporte_balance_general</field>
+        <field name="report_file">l10n_gt_extra.reporte_balance_general</field>
+    </record>
+
+    <menuitem id="reporte_balance_general_wizard_menu"
+              action="reporte_balance_general_wizard_action"
+              parent="menu_informes"/>
+
+</odoo>

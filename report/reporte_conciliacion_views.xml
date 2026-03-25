@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="reporte_conciliacion">
+        <t t-call="web.html_container">
+            <t t-set="data_report_margin_top" t-value="30"/>
+            <t t-set="data_report_header_spacing" t-value="20"/>
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <h2><span t-field="current_company_id.name"/>: Conciliación Bancaria</h2>
+
+                    <div class="row my-2">
+                        <div class="col-6">
+                            <strong>Cuenta:</strong> <span t-esc="data['cuenta_id'][1]"/><br/>
+                            <strong>NIT:</strong> <span t-field="current_company_id.vat"/>
+                        </div>
+                        <div class="col-6">
+                            <strong>Al:</strong>
+                            <span t-esc="data['fecha_hasta']" t-options="{'widget': 'date'}"/>
+                        </div>
+                    </div>
+
+                    <t t-set="res" t-value="datos(data)"/>
+
+                    <!-- COLUMNA BANCO -->
+                    <div class="row mt-3">
+                        <div class="col-6">
+                            <h4>Saldo según banco</h4>
+                            <table class="table table-condensed table-bordered">
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Saldo extracto bancario</strong></td>
+                                        <td class="text-right text-end">
+                                            <span t-esc="res['saldo_banco']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <strong>Más: Depósitos en tránsito</strong>
+                            <table class="table table-condensed">
+                                <thead><tr><th>Fecha</th><th>Doc.</th><th>Concepto</th><th class="text-right text-end">Monto</th></tr></thead>
+                                <tbody>
+                                    <tr t-foreach="res['depositos_transito']" t-as="d">
+                                        <td><span t-esc="d['fecha']" t-options="{'widget': 'date'}"/></td>
+                                        <td><span t-esc="d['documento']"/></td>
+                                        <td><span t-esc="d['concepto']"/></td>
+                                        <td class="text-right text-end">
+                                            <span t-esc="d['monto']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3"><strong>Total depósitos en tránsito</strong></td>
+                                        <td class="text-right text-end">
+                                            <strong><span t-esc="res['total_depositos']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <strong>Menos: Cheques pendientes de cobro</strong>
+                            <table class="table table-condensed">
+                                <thead><tr><th>Fecha</th><th>Doc.</th><th>Concepto</th><th class="text-right text-end">Monto</th></tr></thead>
+                                <tbody>
+                                    <tr t-foreach="res['cheques_pendientes']" t-as="c">
+                                        <td><span t-esc="c['fecha']" t-options="{'widget': 'date'}"/></td>
+                                        <td><span t-esc="c['documento']"/></td>
+                                        <td><span t-esc="c['concepto']"/></td>
+                                        <td class="text-right text-end">
+                                            <span t-esc="c['monto']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3"><strong>Total cheques pendientes</strong></td>
+                                        <td class="text-right text-end">
+                                            <strong><span t-esc="res['total_cheques']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <table class="table table-condensed table-bordered">
+                                <tbody>
+                                    <tr class="table-active">
+                                        <td><strong>Saldo ajustado banco</strong></td>
+                                        <td class="text-right text-end">
+                                            <strong><span t-esc="res['saldo_ajustado_banco']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- COLUMNA LIBRO -->
+                        <div class="col-6">
+                            <h4>Saldo según libros contables</h4>
+                            <table class="table table-condensed table-bordered">
+                                <tbody>
+                                    <tr class="table-active">
+                                        <td><strong>Saldo según libro contable</strong></td>
+                                        <td class="text-right text-end">
+                                            <strong><span t-esc="res['saldo_libro']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- DIFERENCIA -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <table class="table table-condensed table-bordered">
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Diferencia (Banco ajustado - Libros)</strong></td>
+                                        <td class="text-right text-end">
+                                            <strong><span t-esc="res['diferencia']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
+                                        </td>
+                                        <td>
+                                            <t t-if="abs(res['diferencia']) &lt; 0.01">
+                                                <span class="badge bg-success">✓ CONCILIADO</span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="badge bg-danger">⚠ DIFERENCIA</span>
+                                            </t>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-4 text-center">
+                            <br/><br/>
+                            <div style="border-top:1px solid black; padding-top:4px;">Preparado por</div>
+                        </div>
+                        <div class="col-4 text-center">
+                            <br/><br/>
+                            <div style="border-top:1px solid black; padding-top:4px;">Revisado por</div>
+                        </div>
+                        <div class="col-4 text-center">
+                            <br/><br/>
+                            <div style="border-top:1px solid black; padding-top:4px;">Autorizado por</div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

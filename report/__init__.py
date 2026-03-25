@@ -7,3 +7,10 @@ from . import reporte_partida
 from . import reporte_inventario
 from . import reporte_diario
 from . import reporte_mayor
+from . import reporte_isr
+from . import reporte_balance_saldos
+from . import reporte_estado_cuenta
+from . import reporte_fel
+from . import reporte_conciliacion
+from . import reporte_pequeno
+from . import reporte_financiero

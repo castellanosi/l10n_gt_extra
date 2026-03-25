@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ===================== ESTADO DE RESULTADOS ===================== -->
+    <template id="reporte_estado_resultados">
+        <t t-call="web.html_container">
+            <t t-set="data_report_margin_top" t-value="30"/>
+            <t t-set="data_report_header_spacing" t-value="20"/>
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <h2><span t-field="current_company_id.name"/>: Estado de Resultados</h2>
+
+                    <div class="row my-2">
+                        <div class="col-6">
+                            <strong>NIT:</strong> <span t-field="current_company_id.vat"/><br/>
+                            <strong>Empresa:</strong> <span t-field="current_company_id.partner_id.name"/>
+                        </div>
+                        <div class="col-6">
+                            <strong>Período del:</strong>
+                            <span t-esc="data['fecha_desde']" t-options="{'widget': 'date'}"/>
+                            al <span t-esc="data['fecha_hasta']" t-options="{'widget': 'date'}"/>
+                        </div>
+                    </div>
+
+                    <t t-set="res" t-value="datos(data)"/>
+
+                    <!-- INGRESOS -->
+                    <table class="table table-condensed mb-0">
+                        <thead>
+                            <tr class="table-primary">
+                                <th colspan="2"><strong>Ingresos</strong></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="res['ingresos']" t-as="l">
+                                <td><span t-esc="l['codigo']"/> — <span t-esc="l['nombre']"/></td>
+                                <td class="text-right text-end">
+                                    <span t-esc="l['saldo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td><strong>Total ingresos</strong></td>
+                                <td class="text-right text-end">
+                                    <strong><span t-esc="res['total_ingresos']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <!-- COSTOS -->
+                    <table class="table table-condensed mb-0 mt-2">
+                        <thead>
+                            <tr class="table-warning">
+                                <th colspan="2"><strong>Costo de ventas</strong></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="res['costos']" t-as="l">
+                                <td><span t-esc="l['codigo']"/> — <span t-esc="l['nombre']"/></td>
+                                <td class="text-right text-end">
+                                    <span t-esc="l['saldo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td><strong>Total costo de ventas</strong></td>
+                                <td class="text-right text-end">
+                                    <strong><span t-esc="res['total_costos']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <table class="table table-condensed mb-0 mt-0">
+                        <tbody>
+                            <tr class="table-success">
+                                <td><strong>Utilidad bruta</strong></td>
+                                <td class="text-right text-end">
+                                    <strong><span t-esc="res['utilidad_bruta']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- GASTOS -->
+                    <table class="table table-condensed mb-0 mt-2">
+                        <thead>
+                            <tr class="table-danger">
+                                <th colspan="2"><strong>Gastos de operación</strong></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="res['gastos']" t-as="l">
+                                <td><span t-esc="l['codigo']"/> — <span t-esc="l['nombre']"/></td>
+                                <td class="text-right text-end">
+                                    <span t-esc="l['saldo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td><strong>Total gastos de operación</strong></td>
+                                <td class="text-right text-end">
+                                    <strong><span t-esc="res['total_gastos']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <!-- RESULTADO FINAL -->
+                    <table class="table table-condensed mt-2">
+                        <tbody>
+                            <tr class="table-active">
+                                <td>
+                                    <strong t-if="res['utilidad_neta'] >= 0">Utilidad neta del período</strong>
+                                    <strong t-else="">Pérdida neta del período</strong>
+                                </td>
+                                <td class="text-right text-end">
+                                    <strong><span t-esc="res['utilidad_neta']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="row mt-4">
+                        <div class="col-4 text-center">
+                            <br/><br/>
+                            <div style="border-top:1px solid black; padding-top:4px;">Preparado por</div>
+                        </div>
+                        <div class="col-4 text-center">
+                            <br/><br/>
+                            <div style="border-top:1px solid black; padding-top:4px;">Contador</div>
+                        </div>
+                        <div class="col-4 text-center">
+                            <br/><br/>
+                            <div style="border-top:1px solid black; padding-top:4px;">Gerente General</div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <!-- ===================== BALANCE GENERAL ===================== -->
+    <template id="reporte_balance_general">
+        <t t-call="web.html_container">
+            <t t-set="data_report_margin_top" t-value="30"/>
+            <t t-set="data_report_header_spacing" t-value="20"/>
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <h2><span t-field="current_company_id.name"/>: Balance General</h2>
+
+                    <div class="row my-2">
+                        <div class="col-6">
+                            <strong>NIT:</strong> <span t-field="current_company_id.vat"/><br/>
+                            <strong>Empresa:</strong> <span t-field="current_company_id.partner_id.name"/>
+                        </div>
+                        <div class="col-6">
+                            <strong>Al:</strong>
+                            <span t-esc="data['fecha_hasta']" t-options="{'widget': 'date'}"/>
+                        </div>
+                    </div>
+
+                    <t t-set="res" t-value="datos(data)"/>
+
+                    <div class="row">
+                        <!-- ACTIVOS -->
+                        <div class="col-6">
+                            <table class="table table-condensed">
+                                <thead>
+                                    <tr class="table-primary">
+                                        <th colspan="2"><strong>Activos</strong></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="res['activos']" t-as="l">
+                                        <td><span t-esc="l['codigo']"/> — <span t-esc="l['nombre']"/></td>
+                                        <td class="text-right text-end">
+                                            <span t-esc="l['saldo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="table-active">
+                                        <td><strong>Total activos</strong></td>
+                                        <td class="text-right text-end">
+                                            <strong><span t-esc="res['total_activo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <!-- PASIVOS Y CAPITAL -->
+                        <div class="col-6">
+                            <table class="table table-condensed">
+                                <thead>
+                                    <tr class="table-warning">
+                                        <th colspan="2"><strong>Pasivos</strong></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="res['pasivos']" t-as="l">
+                                        <td><span t-esc="l['codigo']"/> — <span t-esc="l['nombre']"/></td>
+                                        <td class="text-right text-end">
+                                            <span t-esc="l['saldo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td><strong>Total pasivos</strong></td>
+                                        <td class="text-right text-end">
+                                            <strong><span t-esc="res['total_pasivo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+
+                            <table class="table table-condensed mt-2">
+                                <thead>
+                                    <tr class="table-success">
+                                        <th colspan="2"><strong>Capital contable</strong></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="res['capital']" t-as="l">
+                                        <td><span t-esc="l['codigo']"/> — <span t-esc="l['nombre']"/></td>
+                                        <td class="text-right text-end">
+                                            <span t-esc="l['saldo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <t t-if="res['utilidad_periodo'] >= 0">Utilidad del período</t>
+                                            <t t-else="">Pérdida del período</t>
+                                        </td>
+                                        <td class="text-right text-end">
+                                            <span t-esc="res['utilidad_periodo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td><strong>Total capital</strong></td>
+                                        <td class="text-right text-end">
+                                            <strong><span t-esc="res['total_capital_mas_utilidad']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
+                                        </td>
+                                    </tr>
+                                    <tr class="table-active">
+                                        <td><strong>Total pasivos + capital</strong></td>
+                                        <td class="text-right text-end">
+                                            <strong><span t-esc="res['total_pasivo_capital']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <t t-if="abs(res['cuadre']) > 0.01">
+                        <div class="alert alert-danger mt-2">
+                            <strong>Diferencia de cuadre:</strong>
+                            <span t-esc="res['cuadre']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
+                        </div>
+                    </t>
+
+                    <div class="row mt-4">
+                        <div class="col-4 text-center">
+                            <br/><br/>
+                            <div style="border-top:1px solid black; padding-top:4px;">Preparado por</div>
+                        </div>
+                        <div class="col-4 text-center">
+                            <br/><br/>
+                            <div style="border-top:1px solid black; padding-top:4px;">Contador</div>
+                        </div>
+                        <div class="col-4 text-center">
+                            <br/><br/>
+                            <div style="border-top:1px solid black; padding-top:4px;">Gerente General</div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+
+</odoo>
