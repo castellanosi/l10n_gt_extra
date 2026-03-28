@@ -1,6 +1,14 @@
 # -*- encoding: utf-8 -*-
 
-from odoo import api, models, fields
+from odoo import api, models
+
+
+def _to_str(val, lang='en_US'):
+    """Odoo 18: campos traducibles desde SQL raw retornan dict (JSONB).
+    Extrae el string para el idioma activo o el primero disponible."""
+    if isinstance(val, dict):
+        return val.get(lang) or val.get('en_US') or next(iter(val.values()), '')
+    return val or ''
 
 
 class ReporteEstadoResultados(models.AbstractModel):
@@ -13,7 +21,6 @@ class ReporteEstadoResultados(models.AbstractModel):
 
     def _movimientos_cuentas(self, tipos, fecha_desde, fecha_hasta):
         tipos_str = ','.join(["'{}'".format(t) for t in tipos])
-        # ✅ Odoo 18: sin a.code en SQL — se obtiene via ORM después
         self.env.cr.execute(
             "SELECT a.id, a.name, a.account_type, "
             "COALESCE(SUM(l.debit),0) AS debe, COALESCE(SUM(l.credit),0) AS haber "
@@ -28,6 +35,7 @@ class ReporteEstadoResultados(models.AbstractModel):
         )
         rows = self.env.cr.dictfetchall()
 
+        lang = self.env.lang or 'en_US'
         account_ids = [r['id'] for r in rows]
         cuentas = {a.id: a for a in self.env['account.account'].browse(account_ids)}
 
@@ -36,12 +44,13 @@ class ReporteEstadoResultados(models.AbstractModel):
         for r in rows:
             cuenta = cuentas.get(r['id'])
             codigo = cuenta.code if cuenta and hasattr(cuenta, 'code') and cuenta.code else ''
+            nombre = _to_str(r['name'], lang)
             if r['account_type'] in self.TIPOS_INGRESOS:
                 saldo = r['haber'] - r['debe']
             else:
                 saldo = r['debe'] - r['haber']
             total += saldo
-            lineas.append({'codigo': codigo, 'nombre': r['name'], 'saldo': saldo})
+            lineas.append({'codigo': codigo, 'nombre': nombre, 'saldo': saldo})
 
         lineas = sorted(lineas, key=lambda l: l['codigo'] or l['nombre'])
         return lineas, total
@@ -111,7 +120,6 @@ class ReporteBalanceGeneral(models.AbstractModel):
 
     def _cuentas_con_saldo(self, tipos, fecha_hasta):
         tipos_str = ','.join(["'{}'".format(t) for t in tipos])
-        # ✅ Odoo 18: sin a.code en SQL
         self.env.cr.execute(
             "SELECT DISTINCT a.id, a.name, a.account_type "
             "FROM account_move_line l "
@@ -123,6 +131,7 @@ class ReporteBalanceGeneral(models.AbstractModel):
         )
         rows = self.env.cr.dictfetchall()
 
+        lang = self.env.lang or 'en_US'
         account_ids = [r['id'] for r in rows]
         cuentas = {a.id: a for a in self.env['account.account'].browse(account_ids)}
 
@@ -131,10 +140,11 @@ class ReporteBalanceGeneral(models.AbstractModel):
         for r in rows:
             cuenta = cuentas.get(r['id'])
             codigo = cuenta.code if cuenta and hasattr(cuenta, 'code') and cuenta.code else ''
+            nombre = _to_str(r['name'], lang)
             saldo_raw = self._saldo_cuenta(r['id'], fecha_hasta)
             saldo = saldo_raw if r['account_type'] in self.TIPOS_ACTIVO else -saldo_raw
             if saldo != 0:
-                lineas.append({'codigo': codigo, 'nombre': r['name'], 'saldo': saldo})
+                lineas.append({'codigo': codigo, 'nombre': nombre, 'saldo': saldo})
                 total += saldo
 
         lineas = sorted(lineas, key=lambda l: l['codigo'] or l['nombre'])
