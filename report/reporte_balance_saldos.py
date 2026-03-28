@@ -36,7 +36,6 @@ class ReporteBalanceSaldos(models.AbstractModel):
             'saldo_deudor': 0, 'saldo_acreedor': 0,
         }
 
-        # Obtener cuentas con movimientos en el período
         filtro_tipo = datos.get('filtro_tipo', 'todas')
         tipos_mapa = {
             'balance': ['asset_receivable', 'asset_cash', 'asset_current', 'asset_non_current',
@@ -52,8 +51,10 @@ class ReporteBalanceSaldos(models.AbstractModel):
             tipos_str = ','.join(["'{}'".format(t) for t in tipos_mapa[filtro_tipo]])
             where_tipo = "AND a.account_type IN ({})".format(tipos_str)
 
+        # ✅ Odoo 18: 'code' no existe como columna SQL — usar solo id, name, account_type
+        #    El código se obtiene después via ORM (cuenta.code)
         self.env.cr.execute(
-            "SELECT a.id, a.code, a.name, "
+            "SELECT a.id, a.name, "
             "COALESCE(SUM(l.debit),0) AS debe, COALESCE(SUM(l.credit),0) AS haber "
             "FROM account_move_line l "
             "JOIN account_account a ON l.account_id = a.id "
@@ -61,17 +62,23 @@ class ReporteBalanceSaldos(models.AbstractModel):
             "AND l.date >= %s AND l.date <= %s "
             "AND l.company_id = %s "
             + where_tipo +
-            " GROUP BY a.id, a.code, a.name ORDER BY a.code",
+            " GROUP BY a.id, a.name",
             (datos['fecha_desde'], datos['fecha_hasta'], self.env.company.id)
         )
         rows = self.env.cr.dictfetchall()
 
+        # Obtener códigos via ORM (compatible con Odoo 17 y 18)
+        account_ids = [r['id'] for r in rows]
+        cuentas = {a.id: a for a in self.env['account.account'].browse(account_ids)}
+
         lineas = []
         for r in rows:
+            cuenta = cuentas.get(r['id'])
+            codigo = cuenta.code if cuenta and hasattr(cuenta, 'code') and cuenta.code else ''
             saldo_ant = self._saldo_anterior(r['id'], datos['fecha_desde'])
             saldo_final = saldo_ant + r['debe'] - r['haber']
             lineas.append({
-                'codigo': r['code'],
+                'codigo': codigo,
                 'cuenta': r['name'],
                 'saldo_anterior': saldo_ant,
                 'debe': r['debe'],
@@ -84,6 +91,9 @@ class ReporteBalanceSaldos(models.AbstractModel):
             totales['haber'] += r['haber']
             totales['saldo_deudor'] += saldo_final if saldo_final > 0 else 0
             totales['saldo_acreedor'] += -saldo_final if saldo_final < 0 else 0
+
+        # Ordenar por código
+        lineas = sorted(lineas, key=lambda l: l['codigo'] or l['cuenta'])
 
         return {'lineas': lineas, 'totales': totales}
 
