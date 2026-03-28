@@ -2,29 +2,34 @@
 <odoo>
     <template id="reporte_isr">
         <t t-call="web.html_container">
-            <t t-set="data_report_margin_top" t-value="30"/>
-            <t t-set="data_report_header_spacing" t-value="20"/>
             <t t-call="web.external_layout">
                 <div class="page">
-                    <h2><span t-field="current_company_id.name"/>: Reporte de Retenciones ISR</h2>
 
-                    <div class="row my-2">
+                    <div class="row mb-2 mt-2">
+                        <div class="col-12">
+                            <h4 style="margin:0; border-bottom:1px solid #ccc; padding-bottom:4px;">
+                                Reporte de Retenciones ISR
+                            </h4>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3" style="font-size:12px;">
                         <div class="col-6">
                             <strong>NIT:</strong> <span t-field="current_company_id.vat"/><br/>
                             <strong>Empresa:</strong> <span t-field="current_company_id.partner_id.name"/><br/>
+                            <strong>Tipo:</strong>
+                            <span t-esc="'Compras' if data.get('tipo_reporte') == 'compra' else 'Ventas'"/>
                         </div>
                         <div class="col-6">
                             <strong>Período del:</strong>
                             <span t-esc="data['fecha_desde']" t-options="{'widget': 'date'}"/>
-                            al <span t-esc="data['fecha_hasta']" t-options="{'widget': 'date'}"/><br/>
-                            <strong>Tipo:</strong>
-                            <span t-esc="'Compras' if data.get('tipo_reporte') == 'compra' else 'Ventas'"/>
+                            al <span t-esc="data['fecha_hasta']" t-options="{'widget': 'date'}"/>
                         </div>
                     </div>
 
                     <t t-set="result" t-value="lineas(data)"/>
 
-                    <table class="table table-condensed">
+                    <table class="table table-condensed" style="font-size:11px;">
                         <thead>
                             <tr>
                                 <th>Fecha</th>
@@ -70,6 +75,7 @@
                             </tr>
                         </tfoot>
                     </table>
+
                 </div>
             </t>
         </t>

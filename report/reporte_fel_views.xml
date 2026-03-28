@@ -2,17 +2,19 @@
 <odoo>
     <template id="reporte_fel">
         <t t-call="web.html_container">
-            <t t-set="data_report_margin_top" t-value="30"/>
-            <t t-set="data_report_header_spacing" t-value="20"/>
             <t t-call="web.external_layout">
                 <div class="page">
-                    <h2><span t-field="current_company_id.name"/>: Reporte Facturas Electrónicas (FEL)</h2>
-
-                    <div class="row my-2">
+                    <div class="row mb-2 mt-2">
+                        <div class="col-12">
+                            <h4 style="margin:0; border-bottom:1px solid #ccc; padding-bottom:4px;">
+                                Facturas Electrónicas (FEL)
+                            </h4>
+                        </div>
+                    </div>
+                    <div class="row mb-3" style="font-size:12px;">
                         <div class="col-6">
                             <strong>NIT:</strong> <span t-field="current_company_id.vat"/><br/>
-                            <strong>Tipo:</strong>
-                            <span t-esc="'Compras' if data.get('tipo') == 'compra' else 'Ventas'"/>
+                            <strong>Tipo:</strong> <span t-esc="'Compras' if data.get('tipo') == 'compra' else 'Ventas'"/>
                         </div>
                         <div class="col-6">
                             <strong>Período del:</strong>
@@ -20,19 +22,12 @@
                             al <span t-esc="data['fecha_hasta']" t-options="{'widget': 'date'}"/>
                         </div>
                     </div>
-
                     <t t-set="result" t-value="lineas(data)"/>
-
-                    <table class="table table-condensed" style="font-size:10px;">
+                    <table class="table table-condensed" style="font-size:9px;">
                         <thead>
                             <tr>
-                                <th>Fecha</th>
-                                <th>Tipo</th>
-                                <th>Serie</th>
-                                <th>No.</th>
-                                <th>UUID / Autorización</th>
-                                <th>Proveedor / Cliente</th>
-                                <th>NIT</th>
+                                <th>Fecha</th><th>Tipo</th><th>Serie</th><th>No.</th>
+                                <th>UUID / Autorización</th><th>Proveedor / Cliente</th><th>NIT</th>
                                 <th class="text-right text-end">Base</th>
                                 <th class="text-right text-end">IVA</th>
                                 <th class="text-right text-end">ISR/Ret.</th>
@@ -48,37 +43,19 @@
                                 <td style="font-size:8px;"><span t-esc="l['uuid']"/></td>
                                 <td><span t-esc="l['partner']"/></td>
                                 <td><span t-esc="l['nit']"/></td>
-                                <td class="text-right text-end">
-                                    <span t-esc="l['base']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
-                                </td>
-                                <td class="text-right text-end">
-                                    <span t-esc="l['iva']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
-                                </td>
-                                <td class="text-right text-end">
-                                    <span t-esc="l['isr']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
-                                </td>
-                                <td class="text-right text-end">
-                                    <span t-esc="l['total']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
-                                </td>
+                                <td class="text-right text-end"><span t-esc="l['base']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                <td class="text-right text-end"><span t-esc="l['iva']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                <td class="text-right text-end"><span t-esc="l['isr']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                <td class="text-right text-end"><span t-esc="l['total']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
                             </tr>
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="7">
-                                    <strong>Totales (<span t-esc="result['totales']['num_facturas']"/> facturas)</strong>
-                                </td>
-                                <td class="text-right text-end">
-                                    <strong><span t-esc="result['totales']['base']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
-                                </td>
-                                <td class="text-right text-end">
-                                    <strong><span t-esc="result['totales']['iva']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
-                                </td>
-                                <td class="text-right text-end">
-                                    <strong><span t-esc="result['totales']['isr']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
-                                </td>
-                                <td class="text-right text-end">
-                                    <strong><span t-esc="result['totales']['total']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong>
-                                </td>
+                                <td colspan="7"><strong>Totales (<span t-esc="result['totales']['num_facturas']"/> facturas)</strong></td>
+                                <td class="text-right text-end"><strong><span t-esc="result['totales']['base']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td>
+                                <td class="text-right text-end"><strong><span t-esc="result['totales']['iva']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td>
+                                <td class="text-right text-end"><strong><span t-esc="result['totales']['isr']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td>
+                                <td class="text-right text-end"><strong><span t-esc="result['totales']['total']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td>
                             </tr>
                         </tfoot>
                     </table>
