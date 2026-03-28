@@ -3,12 +3,18 @@
 from odoo import api, models, fields
 
 
+def _to_str(val, lang='en_US'):
+    """Odoo 18: campos traducibles desde SQL raw pueden ser dict (JSONB)."""
+    if isinstance(val, dict):
+        return val.get(lang) or val.get('en_US') or next(iter(val.values()), '')
+    return val or ''
+
+
 class ReporteBalanceSaldos(models.AbstractModel):
     _name = 'report.l10n_gt_extra.reporte_balance_saldos'
     _description = 'Balance de Saldos (Balanza de Comprobación)'
 
     def _saldo_anterior(self, account_id, fecha_desde):
-        """Saldo acumulado antes de fecha_desde."""
         cuenta = self.env['account.account'].browse(account_id)
         if not cuenta.include_initial_balance:
             fecha = fields.Date.from_string(fecha_desde)
@@ -51,8 +57,6 @@ class ReporteBalanceSaldos(models.AbstractModel):
             tipos_str = ','.join(["'{}'".format(t) for t in tipos_mapa[filtro_tipo]])
             where_tipo = "AND a.account_type IN ({})".format(tipos_str)
 
-        # ✅ Odoo 18: 'code' no existe como columna SQL — usar solo id, name, account_type
-        #    El código se obtiene después via ORM (cuenta.code)
         self.env.cr.execute(
             "SELECT a.id, a.name, "
             "COALESCE(SUM(l.debit),0) AS debe, COALESCE(SUM(l.credit),0) AS haber "
@@ -67,7 +71,7 @@ class ReporteBalanceSaldos(models.AbstractModel):
         )
         rows = self.env.cr.dictfetchall()
 
-        # Obtener códigos via ORM (compatible con Odoo 17 y 18)
+        lang = self.env.lang or 'en_US'
         account_ids = [r['id'] for r in rows]
         cuentas = {a.id: a for a in self.env['account.account'].browse(account_ids)}
 
@@ -75,11 +79,12 @@ class ReporteBalanceSaldos(models.AbstractModel):
         for r in rows:
             cuenta = cuentas.get(r['id'])
             codigo = cuenta.code if cuenta and hasattr(cuenta, 'code') and cuenta.code else ''
+            nombre = _to_str(r['name'], lang)
             saldo_ant = self._saldo_anterior(r['id'], datos['fecha_desde'])
             saldo_final = saldo_ant + r['debe'] - r['haber']
             lineas.append({
                 'codigo': codigo,
-                'cuenta': r['name'],
+                'cuenta': nombre,
                 'saldo_anterior': saldo_ant,
                 'debe': r['debe'],
                 'haber': r['haber'],
@@ -92,9 +97,7 @@ class ReporteBalanceSaldos(models.AbstractModel):
             totales['saldo_deudor'] += saldo_final if saldo_final > 0 else 0
             totales['saldo_acreedor'] += -saldo_final if saldo_final < 0 else 0
 
-        # Ordenar por código
         lineas = sorted(lineas, key=lambda l: l['codigo'] or l['cuenta'])
-
         return {'lineas': lineas, 'totales': totales}
 
     @api.model
