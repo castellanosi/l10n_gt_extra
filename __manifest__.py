@@ -25,7 +25,7 @@
         - Balance General
     """,
     'author': 'aquíH',
-    'website': 'http://www.aquih.com/',
+    'website': '',
     'depends': ['l10n_gt', 'account_tax_python', 'product'],
     'data': [
         'views/account_views.xml',
