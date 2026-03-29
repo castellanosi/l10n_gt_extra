@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ==================== CUENTAS POR COBRAR ==================== -->
+    <record id="reporte_cuentas_cobrar_wizard_view_form" model="ir.ui.view">
+        <field name="name">l10n_gt_extra.reporte_cuentas_cobrar.wizard</field>
+        <field name="model">l10n_gt_extra.reporte_cuentas_cobrar.wizard</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Cuentas por Cobrar">
+                <group>
+                    <group>
+                        <field name="folio_inicial"/>
+                        <field name="fecha_corte"/>
+                        <field name="solo_con_saldo"/>
+                    </group>
+                    <group>
+                        <field name="name" invisible="1"/>
+                        <field name="archivo" readonly="1" filename="name"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="print_report" string="Reporte PDF" type="object" class="oe_highlight"/>
+                    <button name="print_report_excel" string="Reporte Excel" type="object" class="oe_highlight"/>
+                    <button special="cancel" string="Cancelar" class="oe_link"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="reporte_cuentas_cobrar_wizard_action" model="ir.actions.act_window">
+        <field name="name">Cuentas por Cobrar</field>
+        <field name="res_model">l10n_gt_extra.reporte_cuentas_cobrar.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="reporte_cuentas_cobrar_wizard_report" model="ir.actions.report">
+        <field name="name">l10n_gt_extra.reporte_cuentas_cobrar</field>
+        <field name="model">l10n_gt_extra.reporte_cuentas_cobrar.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">l10n_gt_extra.reporte_cuentas_cobrar</field>
+        <field name="report_file">l10n_gt_extra.reporte_cuentas_cobrar</field>
+    </record>
+
+    <menuitem id="reporte_cuentas_cobrar_wizard_menu"
+              action="reporte_cuentas_cobrar_wizard_action"
+              parent="menu_informes"/>
+
+    <!-- ==================== CUENTAS POR PAGAR ==================== -->
+    <record id="reporte_cuentas_pagar_wizard_view_form" model="ir.ui.view">
+        <field name="name">l10n_gt_extra.reporte_cuentas_pagar.wizard</field>
+        <field name="model">l10n_gt_extra.reporte_cuentas_pagar.wizard</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form string="Cuentas por Pagar">
+                <group>
+                    <group>
+                        <field name="folio_inicial"/>
+                        <field name="fecha_corte"/>
+                        <field name="solo_con_saldo"/>
+                    </group>
+                    <group>
+                        <field name="name" invisible="1"/>
+                        <field name="archivo" readonly="1" filename="name"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="print_report" string="Reporte PDF" type="object" class="oe_highlight"/>
+                    <button name="print_report_excel" string="Reporte Excel" type="object" class="oe_highlight"/>
+                    <button special="cancel" string="Cancelar" class="oe_link"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="reporte_cuentas_pagar_wizard_action" model="ir.actions.act_window">
+        <field name="name">Cuentas por Pagar</field>
+        <field name="res_model">l10n_gt_extra.reporte_cuentas_pagar.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="reporte_cuentas_pagar_wizard_report" model="ir.actions.report">
+        <field name="name">l10n_gt_extra.reporte_cuentas_pagar</field>
+        <field name="model">l10n_gt_extra.reporte_cuentas_pagar.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">l10n_gt_extra.reporte_cuentas_pagar</field>
+        <field name="report_file">l10n_gt_extra.reporte_cuentas_pagar</field>
+    </record>
+
+    <menuitem id="reporte_cuentas_pagar_wizard_menu"
+              action="reporte_cuentas_pagar_wizard_action"
+              parent="menu_informes"/>
+
+</odoo>
