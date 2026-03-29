@@ -24,7 +24,7 @@
         - Estado de Resultados
         - Balance General
     """,
-    'author': 'aquíH',
+    'author': 'AI Guatemala',
     'website': '',
     'depends': ['l10n_gt', 'account_tax_python', 'product'],
     'data': [
