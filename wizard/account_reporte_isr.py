@@ -11,6 +11,7 @@ import io
 class AsistenteReporteISR(models.TransientModel):
     _name = 'l10n_gt_extra.reporte_isr.wizard'
     _description = 'Reporte ISR Retenciones'
+    folio_inicial = fields.Integer(string='Folio Inicial', required=True, default=1)
 
     fecha_desde = fields.Date(string="Fecha Inicial", required=True,
                               default=lambda self: time.strftime('%Y-%m-01'))
@@ -28,6 +29,7 @@ class AsistenteReporteISR(models.TransientModel):
 
     def _build_dict(self):
         return {
+            'folio_inicial': self.folio_inicial,
             'fecha_desde': self.fecha_desde,
             'fecha_hasta': self.fecha_hasta,
             'tipo_reporte': self.tipo_reporte,

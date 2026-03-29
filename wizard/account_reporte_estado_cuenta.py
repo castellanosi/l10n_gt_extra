@@ -10,6 +10,7 @@ import io
 class AsistenteReporteEstadoCuenta(models.TransientModel):
     _name = 'l10n_gt_extra.reporte_estado_cuenta.wizard'
     _description = 'Estado de Cuenta por Cliente / Proveedor'
+    folio_inicial = fields.Integer(string='Folio Inicial', required=True, default=1)
 
     partner_id = fields.Many2one('res.partner', string="Cliente / Proveedor", required=True)
     fecha_desde = fields.Date(string="Fecha Inicial", required=True,
@@ -21,6 +22,7 @@ class AsistenteReporteEstadoCuenta(models.TransientModel):
 
     def _build_dict(self):
         return {
+            'folio_inicial': self.folio_inicial,
             'partner_id': [self.partner_id.id, self.partner_id.name],
             'fecha_desde': self.fecha_desde,
             'fecha_hasta': self.fecha_hasta,

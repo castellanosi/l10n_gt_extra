@@ -10,6 +10,7 @@ import io
 class AsistenteReportePequeno(models.TransientModel):
     _name = 'l10n_gt_extra.reporte_pequeno.wizard'
     _description = 'Libro Compras/Ventas Pequeño Contribuyente'
+    folio_inicial = fields.Integer(string='Folio Inicial', required=True, default=1)
 
     tipo = fields.Selection([('compra', 'Compras'), ('venta', 'Ventas')],
                             string="Tipo", required=True, default='compra')
@@ -27,6 +28,7 @@ class AsistenteReportePequeno(models.TransientModel):
 
     def _build_dict(self):
         return {
+            'folio_inicial': self.folio_inicial,
             'tipo': self.tipo,
             'fecha_desde': self.fecha_desde,
             'fecha_hasta': self.fecha_hasta,
