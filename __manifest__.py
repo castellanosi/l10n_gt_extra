@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 {
     'name': 'Guatemala - reportes y funcionalidad extra',
-    'version': '5.40',
+    'version': '18.0.5.40',
     'category': 'Accounting/Localizations/Reporting',
     'description': """
         Reportes requeridos por la SAT y otra funcionalidad extra para llevar
@@ -51,6 +51,7 @@
         'report/reporte_conciliacion_views.xml',
         'report/reporte_pequeno_views.xml',
         'report/reporte_financiero_views.xml',
+        'report/reporte_cuentas_cobrar_pagar_views.xml',
 
         # Wizards existentes
         'wizard/account_account_reporte_banco_views.xml',
@@ -68,6 +69,7 @@
         'wizard/account_reporte_conciliacion_views.xml',
         'wizard/account_reporte_pequeno_views.xml',
         'wizard/account_reporte_financiero_views.xml',
+        'wizard/account_reporte_cuentas_cobrar_pagar_views.xml',
 
         'security/ir.model.access.csv',
     ],
