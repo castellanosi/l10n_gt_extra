@@ -9,7 +9,8 @@
             <form string="Reporte ISR Retenciones">
                 <group>
                     <group>
-                        <field name="tipo_reporte"/>
+                        <field name="folio_inicial"/>
+                    <field name="tipo_reporte"/>
                         <field name="fecha_desde"/>
                         <field name="fecha_hasta"/>
                     </group>

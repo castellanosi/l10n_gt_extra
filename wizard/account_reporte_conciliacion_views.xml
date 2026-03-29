@@ -9,7 +9,8 @@
             <form string="Conciliación Bancaria">
                 <group>
                     <group>
-                        <field name="cuenta_id"/>
+                        <field name="folio_inicial"/>
+                    <field name="cuenta_id"/>
                         <field name="fecha_hasta"/>
                         <field name="saldo_banco"/>
                     </group>
