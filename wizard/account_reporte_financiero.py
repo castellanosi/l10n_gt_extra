@@ -21,7 +21,10 @@ class AsistenteReporteEstadoResultados(models.TransientModel):
 
     def _build_dict(self):
         return {
-            'folio_inicial': self.folio_inicial,'fecha_desde': self.fecha_desde, 'fecha_hasta': self.fecha_hasta}
+            'folio_inicial': self.folio_inicial,
+            'fecha_desde': self.fecha_desde,
+            'fecha_hasta': self.fecha_hasta,
+        }
 
     def print_report(self):
         data = {'ids': [], 'model': self._name, 'form': self._build_dict()}
