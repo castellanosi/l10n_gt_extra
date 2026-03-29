@@ -3,13 +3,11 @@
     <template id="reporte_balance_saldos">
         <t t-call="web.html_container">
             <t t-set="data_report_page_offset" t-value="data.get('folio_inicial', 1) + 1"/>
-            <t t-set="data_report_margin_top" t-value="30"/>
-            <t t-set="data_report_header_spacing" t-value="20"/>
-            <div class="header">
-                Folio: <span class="page" t-esc="data.get('folio_inicial', 1) - 1"/>
-            </div>
             <t t-call="web.external_layout">
                 <div class="page">
+                    <div style="text-align:right; font-size:10px; color:#666; margin-bottom:2px;">
+                        Folio: <span t-esc="data.get('folio_inicial', 1)"/>
+                    </div>
                     <div class="row mb-2 mt-2">
                         <div class="col-12">
                             <h4 style="margin:0; border-bottom:1px solid #ccc; padding-bottom:4px;">
