@@ -9,7 +9,8 @@
             <form string="Estado de Cuenta por Cliente / Proveedor">
                 <group>
                     <group>
-                        <field name="partner_id"/>
+                        <field name="folio_inicial"/>
+                    <field name="partner_id"/>
                         <field name="fecha_desde"/>
                         <field name="fecha_hasta"/>
                     </group>

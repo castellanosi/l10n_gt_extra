@@ -9,7 +9,8 @@
             <form string="Balanza de Comprobación">
                 <group>
                     <group>
-                        <field name="fecha_desde"/>
+                        <field name="folio_inicial"/>
+                    <field name="fecha_desde"/>
                         <field name="fecha_hasta"/>
                         <field name="filtro_tipo"/>
                     </group>

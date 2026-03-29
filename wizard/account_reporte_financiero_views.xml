@@ -10,7 +10,8 @@
             <form string="Estado de Resultados">
                 <group>
                     <group>
-                        <field name="fecha_desde"/>
+                        <field name="folio_inicial"/>
+                    <field name="fecha_desde"/>
                         <field name="fecha_hasta"/>
                     </group>
                     <group>

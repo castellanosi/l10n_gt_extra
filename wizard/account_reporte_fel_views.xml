@@ -9,7 +9,8 @@
             <form string="Reporte Facturas Electrónicas FEL">
                 <group>
                     <group>
-                        <field name="tipo"/>
+                        <field name="folio_inicial"/>
+                    <field name="tipo"/>
                         <field name="fecha_desde"/>
                         <field name="fecha_hasta"/>
                         <field name="solo_fel"/>
