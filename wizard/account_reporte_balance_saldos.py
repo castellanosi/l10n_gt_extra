@@ -10,6 +10,7 @@ import io
 class AsistenteReporteBalanceSaldos(models.TransientModel):
     _name = 'l10n_gt_extra.reporte_balance_saldos.wizard'
     _description = 'Balanza de Comprobación'
+    folio_inicial = fields.Integer(string='Folio Inicial', required=True, default=1)
 
     fecha_desde = fields.Date(string="Fecha Inicial", required=True,
                               default=lambda self: time.strftime('%Y-%m-01'))
@@ -25,6 +26,7 @@ class AsistenteReporteBalanceSaldos(models.TransientModel):
 
     def _build_dict(self):
         return {
+            'folio_inicial': self.folio_inicial,
             'fecha_desde': self.fecha_desde,
             'fecha_hasta': self.fecha_hasta,
             'filtro_tipo': self.filtro_tipo,

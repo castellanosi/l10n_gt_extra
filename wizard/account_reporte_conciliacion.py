@@ -10,6 +10,7 @@ import io
 class AsistenteReporteConciliacion(models.TransientModel):
     _name = 'l10n_gt_extra.reporte_conciliacion.wizard'
     _description = 'Conciliación Bancaria Cuadrática'
+    folio_inicial = fields.Integer(string='Folio Inicial', required=True, default=1)
 
     def _default_cuenta(self):
         ids = self.env.context.get('active_ids', [])
@@ -33,6 +34,7 @@ class AsistenteReporteConciliacion(models.TransientModel):
 
     def _build_dict(self):
         return {
+            'folio_inicial': self.folio_inicial,
             'cuenta_id': [self.cuenta_id.id, self.cuenta_id.display_name],
             'fecha_hasta': self.fecha_hasta,
             'saldo_banco': self.saldo_banco,

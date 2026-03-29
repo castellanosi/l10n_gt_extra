@@ -10,6 +10,7 @@ import io
 class AsistenteReporteEstadoResultados(models.TransientModel):
     _name = 'l10n_gt_extra.reporte_estado_resultados.wizard'
     _description = 'Estado de Resultados'
+    folio_inicial = fields.Integer(string='Folio Inicial', required=True, default=1)
 
     fecha_desde = fields.Date(string="Fecha Inicial", required=True,
                               default=lambda self: time.strftime('%Y-01-01'))
@@ -19,7 +20,8 @@ class AsistenteReporteEstadoResultados(models.TransientModel):
     archivo = fields.Binary('Archivo')
 
     def _build_dict(self):
-        return {'fecha_desde': self.fecha_desde, 'fecha_hasta': self.fecha_hasta}
+        return {
+            'folio_inicial': self.folio_inicial,'fecha_desde': self.fecha_desde, 'fecha_hasta': self.fecha_hasta}
 
     def print_report(self):
         data = {'ids': [], 'model': self._name, 'form': self._build_dict()}
@@ -88,6 +90,7 @@ class AsistenteReporteEstadoResultados(models.TransientModel):
 class AsistenteReporteBalanceGeneral(models.TransientModel):
     _name = 'l10n_gt_extra.reporte_balance_general.wizard'
     _description = 'Balance General'
+    folio_inicial = fields.Integer(string='Folio Inicial', required=True, default=1)
 
     fecha_hasta = fields.Date(string="Al corte del", required=True,
                               default=lambda self: time.strftime('%Y-%m-%d'))
@@ -101,6 +104,7 @@ class AsistenteReporteBalanceGeneral(models.TransientModel):
 
     def _build_dict(self):
         return {
+            'folio_inicial': self.folio_inicial,
             'fecha_hasta': self.fecha_hasta,
             'fecha_desde_er': self.fecha_desde_er,
         }
