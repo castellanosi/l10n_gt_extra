@@ -14,8 +14,8 @@ class ReporteFEL(models.AbstractModel):
         journal_ids = datos.get('diarios_id', [])
         filtro = [
             ('state', 'in', ['posted']),
-            ('date', '>=', datos['fecha_desde']),
-            ('date', '<=', datos['fecha_hasta']),
+            ('invoice_date', '>=', datos['fecha_desde']),
+            ('invoice_date', '<=', datos['fecha_hasta']),
         ]
         if journal_ids:
             filtro.append(('journal_id', 'in', journal_ids))
