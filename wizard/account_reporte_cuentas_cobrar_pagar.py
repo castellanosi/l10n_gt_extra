@@ -36,6 +36,17 @@ class AsistenteReporteCuentasCobrar(models.TransientModel):
         return self.env.ref('l10n_gt_extra.reporte_cuentas_cobrar_wizard_report').with_context(
             landscape=True).report_action(self, data=data)
 
+
+    def preview_report(self):
+        data = {
+            'ids': [],
+            'model': self._name,
+            'form': self.read()[0],
+        }
+        action = self.env.ref('l10n_gt_extra.reporte_cuentas_cobrar_wizard_report').with_context(landscape=True).report_action(self, data=data)
+        action['report_type'] = 'qweb-html'
+        return action
+
     def print_report_excel(self):
         datos = self._build_dict()
         res = self.env['report.l10n_gt_extra.reporte_cuentas_cobrar'].lineas(datos)
@@ -118,6 +129,17 @@ class AsistenteReporteCuentasPagar(models.TransientModel):
         data = {'ids': [], 'model': self._name, 'form': self._build_dict()}
         return self.env.ref('l10n_gt_extra.reporte_cuentas_pagar_wizard_report').with_context(
             landscape=True).report_action(self, data=data)
+
+
+    def preview_report(self):
+        data = {
+            'ids': [],
+            'model': self._name,
+            'form': self.read()[0],
+        }
+        action = self.env.ref('l10n_gt_extra.reporte_cuentas_pagar_wizard_report').with_context(landscape=True).report_action(self, data=data)
+        action['report_type'] = 'qweb-html'
+        return action
 
     def print_report_excel(self):
         datos = self._build_dict()

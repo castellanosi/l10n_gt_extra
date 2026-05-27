@@ -45,6 +45,17 @@ class AsistenteReporteConciliacion(models.TransientModel):
         return self.env.ref('l10n_gt_extra.reporte_conciliacion_wizard_report').report_action(
             self, data=data)
 
+
+    def preview_report(self):
+        data = {
+            'ids': [],
+            'model': self._name,
+            'form': self.read()[0],
+        }
+        action = self.env.ref('l10n_gt_extra.reporte_conciliacion_wizard_report').report_action(self, data=data)
+        action['report_type'] = 'qweb-html'
+        return action
+
     def print_report_excel(self):
         res = self.env['report.l10n_gt_extra.reporte_conciliacion'].datos(self._build_dict())
 

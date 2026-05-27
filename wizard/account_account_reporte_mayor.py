@@ -41,6 +41,17 @@ class AsistenteReporteMayor(models.TransientModel):
         }
         return self.env.ref('l10n_gt_extra.reporte_mayor_wizard_report').report_action(self, data=data)
 
+
+    def preview_report(self):
+        data = {
+            'ids': [],
+            'model': self._name,
+            'form': self.read()[0],
+        }
+        action = self.env.ref('l10n_gt_extra.reporte_mayor_wizard_report').report_action(self, data=data)
+        action['report_type'] = 'qweb-html'
+        return action
+
     def print_report_excel(self):
         if not self.cuentas_id:
             raise UserError('Debe ingresar las cuentas que serán utilizadas en el reporte')

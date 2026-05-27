@@ -22,6 +22,8 @@
                     </group>
                 </group>
                 <footer>
+                    <button name="preview_report" string="&#x1F441; Previsualizar" type="object" class="btn-secondary"/>
+
                     <button name="print_report" string="Reporte" type="object" class="oe_highlight"/>
                     <button name="print_report_excel" string="Reporte excel" type="object" class="oe_highlight"/>
                     <button special="cancel" string="Cancel" class="oe_link"/>

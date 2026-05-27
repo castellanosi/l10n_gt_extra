@@ -32,3 +32,13 @@ class AsistenteReporteInventario(models.TransientModel):
              'form': self.read()[0]
         }
         return self.env.ref('l10n_gt_extra.reporte_inventario_wizard_report').report_action(self, data=data)
+
+    def preview_report(self):
+        data = {
+            'ids': [],
+            'model': self._name,
+            'form': self.read()[0],
+        }
+        action = self.env.ref('l10n_gt_extra.reporte_inventario_wizard_report').report_action(self, data=data)
+        action['report_type'] = 'qweb-html'
+        return action
