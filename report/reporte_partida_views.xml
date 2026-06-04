@@ -5,10 +5,8 @@
             <t t-call="web.external_layout">
                 <div class="page">
                     <t t-foreach="docs" t-as="o">
-
                         <div>
                             <h2><span t-esc="current_company_id.name"/>: Partida</h2>
-
                             <div class="row my-2">
                                 <div class="col-3">
                                     <strong>Partida:</strong> <span t-field="o.name"/><br/>
@@ -23,7 +21,6 @@
                                     <strong>Diario:</strong> <span t-field="o.journal_id.name"/>
                                 </div>
                             </div>
-
                             <t t-set="total_debe" t-value="0" />
                             <t t-set="total_haber" t-value="0" />
                             <table class="table table-condensed">
@@ -40,32 +37,22 @@
                                     <tr t-foreach="o.line_ids" t-as="l">
                                         <t t-set="total_debe" t-value="total_debe + l.debit" />
                                         <t t-set="total_haber" t-value="total_haber + l.credit" />
-                                        <td>
-                                            <span t-field="l.account_id.code"/>
-                                        </td>
-                                        <td>
-                                            <span t-field="l.account_id.name"/>
-                                        </td>
-                                        <td>
-                                            <span t-esc="', '.join(l.analytic_line_ids.account_id.mapped('name'))"/>
-                                        </td>
+                                        <td><span t-field="l.account_id.code"/></td>
+                                        <td><span t-field="l.account_id.name"/></td>
+                                        <td><span t-esc="', '.join(l.analytic_line_ids.account_id.mapped('name'))"/></td>
                                         <td class="text-right">
-                                             <span t-field="l.debit" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
+                                            <span t-field="l.debit" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
                                         </td>
                                         <td class="text-right">
                                             <span t-field="l.credit" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td>
-                                        </td>
-                                        <td>
-                                            Total:
-                                        </td>
-                                        <td>
-                                        </td>
+                                        <td></td>
+                                        <td><strong>Total:</strong></td>
+                                        <td></td>
                                         <td class="text-right">
-                                             <span t-esc="total_debe" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
+                                            <span t-esc="total_debe" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
                                         </td>
                                         <td class="text-right">
                                             <span t-esc="total_haber" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
@@ -73,7 +60,6 @@
                                     </tr>
                                 </tbody>
                             </table>
-
                             <div class="row mt32">
                                 <span t-field="o.narration"/>
                             </div>
@@ -84,11 +70,22 @@
         </t>
     </template>
 
+    <!-- Acción PDF -->
     <record id="action_reporte_partida" model="ir.actions.report">
         <field name="name">Partida</field>
         <field name="model">account.move</field>
         <field name="binding_model_id" ref="model_account_move"/>
         <field name="report_type">qweb-pdf</field>
+        <field name="report_name">l10n_gt_extra.reporte_partida</field>
+        <field name="report_file">l10n_gt_extra.reporte_partida</field>
+    </record>
+
+    <!-- Acción HTML — Vista previa -->
+    <record id="action_reporte_partida_preview" model="ir.actions.report">
+        <field name="name">&#x1F441; Partida (Vista previa)</field>
+        <field name="model">account.move</field>
+        <field name="binding_model_id" ref="model_account_move"/>
+        <field name="report_type">qweb-html</field>
         <field name="report_name">l10n_gt_extra.reporte_partida</field>
         <field name="report_file">l10n_gt_extra.reporte_partida</field>
     </record>
