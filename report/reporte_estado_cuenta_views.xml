@@ -1,68 +1,184 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="reporte_estado_cuenta">
-        <t t-call="web.html_container">
-            <t t-set="data_report_page_offset" t-value="data.get('folio_inicial', 1) + 1"/>
-            <t t-call="web.external_layout">
-                <div class="page">
-                    <div style="text-align:right; font-size:10px; color:#666; margin-bottom:2px;">
-                        Folio: <span t-esc="data.get('folio_inicial', 1)"/>
-                    </div>
-                    <div class="row mb-2 mt-2">
-                        <div class="col-12">
-                            <h4 style="margin:0; border-bottom:1px solid #ccc; padding-bottom:4px;">
-                                Estado de Cuenta
-                            </h4>
-                        </div>
-                    </div>
-                    <div class="row mb-3" style="font-size:12px;">
-                        <div class="col-6">
-                            <strong>Cliente / Proveedor:</strong> <span t-esc="data['partner_id'][1]"/><br/>
-                            <strong>NIT:</strong> <span t-esc="partner.vat or 'CF'"/>
-                        </div>
-                        <div class="col-6">
-                            <strong>Período del:</strong>
-                            <span t-esc="data['fecha_desde']" t-options="{'widget': 'date'}"/>
-                            al <span t-esc="data['fecha_hasta']" t-options="{'widget': 'date'}"/>
-                        </div>
-                    </div>
-                    <t t-set="result" t-value="lineas(data)"/>
-                    <t t-set="sal_ant" t-value="saldo_anterior(data)"/>
-                    <table class="table table-condensed" style="font-size:11px;">
-                        <thead>
-                            <tr>
-                                <th>Fecha</th><th>Documento</th><th>Concepto</th>
-                                <th class="text-right text-end">Debe</th>
-                                <th class="text-right text-end">Haber</th>
-                                <th class="text-right text-end">Saldo</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td></td><td></td><td><strong>Saldo anterior</strong></td>
-                                <td></td><td></td>
-                                <td class="text-right text-end"><strong><span t-esc="sal_ant" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td>
-                            </tr>
-                            <tr t-foreach="result['lineas']" t-as="l">
-                                <td><span t-esc="l['fecha']" t-options="{'widget': 'date'}"/></td>
-                                <td><span t-esc="l['documento']"/></td>
-                                <td><span t-esc="l['concepto']"/></td>
-                                <td class="text-right text-end"><span t-esc="l['debe']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
-                                <td class="text-right text-end"><span t-esc="l['haber']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
-                                <td class="text-right text-end"><span t-esc="l['saldo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
-                            </tr>
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="3"><strong>Totales</strong></td>
-                                <td class="text-right text-end"><strong><span t-esc="result['totales']['debe']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td>
-                                <td class="text-right text-end"><strong><span t-esc="result['totales']['haber']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td>
-                                <td class="text-right text-end"><strong><span t-esc="result['totales']['saldo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </t>
-        </t>
-    </template>
+  <template id="reporte_estado_cuenta">
+    <t t-call="web.html_container">
+      <t t-set="data_report_page_offset" t-value="data.get('folio_inicial', 1) + 1"/>
+      <t t-call="web.external_layout">
+        <div class="page">
+          <div style="text-align:right;font-size:10px;color:#666;margin-bottom:2px;">
+            Folio: <span t-esc="data.get('folio_inicial', 1)"/>
+          </div>
+
+          <div class="row mb-2 mt-2">
+            <div class="col-12">
+              <h4 style="margin:0;border-bottom:1px solid #ccc;padding-bottom:4px;">
+                Estado de Cuenta
+              </h4>
+            </div>
+          </div>
+
+          <div class="row mb-3" style="font-size:12px;">
+            <div class="col-6">
+              <strong>Cliente / Proveedor:</strong>
+              <span t-esc="data['partner_id'][1]"/><br/>
+              <strong>NIT:</strong> <span t-esc="partner.vat or 'CF'"/>
+            </div>
+            <div class="col-6">
+              <strong>Período del:</strong>
+              <span t-esc="data['fecha_desde']" t-options="{'widget':'date'}"/>
+              al
+              <span t-esc="data['fecha_hasta']" t-options="{'widget':'date'}"/>
+            </div>
+          </div>
+
+          <t t-set="result"  t-value="lineas(data)"/>
+          <t t-set="sal_ant" t-value="saldo_anterior(data)"/>
+
+          <table class="table table-condensed" style="font-size:11px;">
+            <thead>
+              <tr style="background:#f5f5f5;">
+                <th style="width:80px;">Fecha</th>
+                <th style="width:130px;">Documento</th>
+                <th>Concepto</th>
+                <th class="text-right text-end" style="width:110px;">Debe</th>
+                <th class="text-right text-end" style="width:110px;">Haber</th>
+                <th class="text-right text-end" style="width:110px;">Saldo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Saldo anterior -->
+              <tr>
+                <td></td><td></td>
+                <td><strong>Saldo anterior</strong></td>
+                <td></td><td></td>
+                <td class="text-right text-end">
+                  <strong>
+                    <span t-esc="sal_ant"
+                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                  </strong>
+                </td>
+              </tr>
+
+              <t t-foreach="result['lineas']" t-as="l">
+
+                <!-- ── Fila principal ── -->
+                <tr t-attf-style="#{l['tipo'] == 'factura' and 'font-weight:500;' or ''}">
+                  <td><span t-esc="l['fecha']" t-options="{'widget':'date'}"/></td>
+                  <td><span t-esc="l['documento']"/></td>
+                  <td><span t-esc="l['concepto']"/></td>
+                  <td class="text-right text-end">
+                    <span t-esc="l['debe']"
+                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                  </td>
+                  <td class="text-right text-end">
+                    <span t-esc="l['haber']"
+                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                  </td>
+                  <td class="text-right text-end">
+                    <span t-esc="l['saldo']"
+                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                  </td>
+                </tr>
+
+                <!-- ── Sub-filas: retenciones ── -->
+                <t t-foreach="l.get('retenciones', [])" t-as="ret">
+                  <tr style="font-size:10px;color:#444;background:#fafafa;">
+                    <td style="padding-left:20px;border-top:none;">
+                      <span t-esc="l['fecha']" t-options="{'widget':'date'}"/>
+                    </td>
+                    <td style="border-top:none;">
+                      <t t-if="ret['numero']">
+                        <span t-esc="ret['numero']"/>
+                      </t>
+                      <t t-else="">—</t>
+                    </td>
+                    <td style="border-top:none;">
+                      ↳ <span t-esc="ret['nombre']"/>
+                      <t t-if="ret['numero']">
+                        &amp;nbsp;·&amp;nbsp;Const. <span t-esc="ret['numero']"/>
+                      </t>
+                    </td>
+                    <!-- Para retenciones: mostrar en columna opuesta al importe de factura -->
+                    <td class="text-right text-end" style="border-top:none;">
+                      <t t-if="ret['haber'] > 0">
+                        <span t-esc="ret['haber']"
+                              t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                      </t>
+                    </td>
+                    <td class="text-right text-end" style="border-top:none;">
+                      <t t-if="ret['debe'] > 0">
+                        <span t-esc="ret['debe']"
+                              t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                      </t>
+                    </td>
+                    <!-- Saldo residual después de esta retención -->
+                    <td class="text-right text-end" style="border-top:none;font-weight:500;">
+                      <span t-esc="ret['sub_saldo']"
+                            t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                    </td>
+                  </tr>
+                </t>
+
+                <!-- ── Sub-filas: pagos aplicados ── -->
+                <t t-foreach="l.get('pagos', [])" t-as="pago">
+                  <tr style="font-size:10px;color:#225;background:#f0f4ff;">
+                    <td style="padding-left:20px;border-top:none;">
+                      <t t-if="pago['fecha']">
+                        <span t-esc="pago['fecha']" t-options="{'widget':'date'}"/>
+                      </t>
+                    </td>
+                    <td style="border-top:none;"><span t-esc="pago['documento']"/></td>
+                    <td style="border-top:none;">↳ <span t-esc="pago['concepto']"/></td>
+                    <td class="text-right text-end" style="border-top:none;">
+                      <t t-if="pago['lado'] == 'debe'">
+                        <span t-esc="pago['monto']"
+                              t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                      </t>
+                    </td>
+                    <td class="text-right text-end" style="border-top:none;">
+                      <t t-if="pago['lado'] == 'haber'">
+                        <span t-esc="pago['monto']"
+                              t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                      </t>
+                    </td>
+                    <!-- Saldo residual después de este pago -->
+                    <td class="text-right text-end" style="border-top:none;font-weight:500;">
+                      <span t-esc="pago['sub_saldo']"
+                            t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                    </td>
+                  </tr>
+                </t>
+
+              </t><!-- fin t-foreach lineas -->
+            </tbody>
+
+            <tfoot>
+              <tr style="background:#f5f5f5;">
+                <td colspan="3"><strong>Totales</strong></td>
+                <td class="text-right text-end">
+                  <strong>
+                    <span t-esc="result['totales']['debe']"
+                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                  </strong>
+                </td>
+                <td class="text-right text-end">
+                  <strong>
+                    <span t-esc="result['totales']['haber']"
+                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                  </strong>
+                </td>
+                <td class="text-right text-end">
+                  <strong>
+                    <span t-esc="result['totales']['saldo']"
+                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                  </strong>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+
+        </div>
+      </t>
+    </t>
+  </template>
 </odoo>

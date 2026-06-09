@@ -7,3 +7,5 @@ from . import report
 def _update_gt_taxes(env):
     for company in env['res.company'].search([('chart_template', '=', 'gt')]):
         company.update_gt_taxes()
+
+from .hooks import post_init_hook  # noqa: F401
