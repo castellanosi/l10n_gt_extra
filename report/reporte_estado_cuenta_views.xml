@@ -119,36 +119,6 @@
                   </tr>
                 </t>
 
-                <!-- ── Sub-filas: pagos aplicados ── -->
-                <t t-foreach="l.get('pagos', [])" t-as="pago">
-                  <tr style="font-size:10px;color:#225;background:#f0f4ff;">
-                    <td style="padding-left:20px;border-top:none;">
-                      <t t-if="pago['fecha']">
-                        <span t-esc="pago['fecha']" t-options="{'widget':'date'}"/>
-                      </t>
-                    </td>
-                    <td style="border-top:none;"><span t-esc="pago['documento']"/></td>
-                    <td style="border-top:none;">↳ <span t-esc="pago['concepto']"/></td>
-                    <td class="text-right text-end" style="border-top:none;">
-                      <t t-if="pago['lado'] == 'debe'">
-                        <span t-esc="pago['monto']"
-                              t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
-                      </t>
-                    </td>
-                    <td class="text-right text-end" style="border-top:none;">
-                      <t t-if="pago['lado'] == 'haber'">
-                        <span t-esc="pago['monto']"
-                              t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
-                      </t>
-                    </td>
-                    <!-- Saldo residual después de este pago -->
-                    <td class="text-right text-end" style="border-top:none;font-weight:500;">
-                      <span t-esc="pago['sub_saldo']"
-                            t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
-                    </td>
-                  </tr>
-                </t>
-
               </t><!-- fin t-foreach lineas -->
             </tbody>
 

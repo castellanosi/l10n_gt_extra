@@ -1,5 +1,15 @@
 # -*- encoding: utf-8 -*-
+import re
 from odoo import api, models
+
+
+def _strip_html(val):
+    """Limpia etiquetas HTML del campo narration (Html field en Odoo 18)."""
+    if not val:
+        return ''
+    if isinstance(val, dict):
+        val = val.get('en_US') or val.get('es_GT') or next(iter(val.values()), '')
+    return re.sub(r'<[^>]+>', '', str(val)).strip()
 
 
 def _jsonb_str(val):
@@ -107,10 +117,14 @@ class ReporteEstadoCuenta(models.AbstractModel):
                    m.name AS documento, m.move_type,
                    l.ref, l.name AS linea_name,
                    m.payment_reference, m.id AS move_id,
-                   COALESCE(m.numero_retencion, '') AS numero_retencion
+                   COALESCE(m.numero_retencion, '') AS numero_retencion,
+                   COALESCE(m.ref, '') AS move_ref,
+                   COALESCE(bsl.payment_ref, '') AS bank_ref,
+                   COALESCE(m.narration, '') AS move_narration
             FROM account_move_line l
             JOIN account_account a ON l.account_id = a.id
             JOIN account_move    m ON l.move_id = m.id
+            LEFT JOIN account_bank_statement_line bsl ON bsl.move_id = m.id
             WHERE l.partner_id   = %s
               AND l.parent_state = 'posted'
               AND l.date        >= %s
@@ -143,7 +157,7 @@ class ReporteEstadoCuenta(models.AbstractModel):
                 retenciones = self._retenciones_de_factura(
                     r['move_id'], r['numero_retencion']
                 )
-                pagos = self._pagos_de_linea(r['id'])
+                pagos = []  # los pagos ya aparecen como filas principales
 
                 # Importe bruto = neto CxC/CxP + retenciones
                 neto      = r['debit'] + r['credit']
@@ -182,16 +196,36 @@ class ReporteEstadoCuenta(models.AbstractModel):
                 tot_debe  += r['debit']
                 tot_haber += r['credit']
 
-            concepto = (
-                _jsonb_str(r['payment_reference']) or
-                _jsonb_str(r['ref']) or
-                _jsonb_str(r['linea_name']) or
-                _jsonb_str(r['documento']) or ''
-            )
+            if es_factura:
+                # Facturas: referencia externa FEL o número de factura proveedor
+                documento_ext = (
+                    _jsonb_str(r['move_ref']) or           # m.ref: UUID FEL o # factura proveedor
+                    _jsonb_str(r['payment_reference']) or
+                    _jsonb_str(r['documento'])             # fallback: correlativo Odoo
+                )
+                concepto = (
+                    _jsonb_str(r['linea_name']) or
+                    _jsonb_str(r['ref']) or
+                    ''
+                )
+            else:
+                # Pagos / banco:
+                # Documento = m.ref (número de referencia bancaria: 25252525, DEP-001, etc.)
+                documento_ext = (
+                    _jsonb_str(r['move_ref']) or           # m.ref: número ref. banco (PRIMERO)
+                    _jsonb_str(r['bank_ref']) or           # bsl.payment_ref: descripción banco
+                    _jsonb_str(r['payment_reference']) or
+                    _jsonb_str(r['documento'])             # fallback: correlativo Odoo
+                )
+                # Concepto = descripción banco + referencia de línea combinadas
+                bank_desc = _jsonb_str(r['bank_ref']) or _strip_html(r['move_narration']) or ''
+                line_desc = _jsonb_str(r['linea_name']) or _jsonb_str(r['ref']) or ''
+                partes = [p for p in [bank_desc, line_desc] if p]
+                concepto = ' — '.join(partes) if partes else ''
 
             lineas.append({
                 'fecha':       r['date'],
-                'documento':   _jsonb_str(r['documento']),
+                'documento':   documento_ext,
                 'concepto':    concepto,
                 'debe':        disp_debe,
                 'haber':       disp_haber,
