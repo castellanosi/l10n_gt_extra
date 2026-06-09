@@ -13,6 +13,9 @@
             <field name="fiscal_position_id" position="after">
                 <field name="tipo_gasto"/>
                 <field name="nota_debito"/>
+                <field name="numero_retencion"
+                    placeholder="Ej: R-ISR-2026-00123"
+                    invisible="move_type not in ['out_invoice','out_refund','in_invoice','in_refund']"/>
                 <field name="diario_facturas_por_rangos" invisible="1"/>
                 <field name="serie_rango" invisible="not diario_facturas_por_rangos"/>
                 <field name="inicial_rango" invisible="not diario_facturas_por_rangos"/>
