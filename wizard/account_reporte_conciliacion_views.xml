@@ -11,6 +11,7 @@
                     <group>
                         <field name="folio_inicial"/>
                     <field name="cuenta_id"/>
+                        <field name="fecha_desde"/>
                         <field name="fecha_hasta"/>
                         <field name="saldo_banco"/>
                     </group>
