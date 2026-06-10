@@ -5,101 +5,197 @@
             <t t-set="data_report_page_offset" t-value="data.get('folio_inicial', 1) + 1"/>
             <t t-call="web.external_layout">
                 <div class="page">
-                    <div style="text-align:right; font-size:10px; color:#666; margin-bottom:2px;">
-                        Folio: <span t-esc="data.get('folio_inicial', 1)"/>
-                    </div>
+
+                    <!-- ── Título ─────────────────────────────────────── -->
                     <div class="row mb-2 mt-2">
                         <div class="col-12">
-                            <h4 style="margin:0; border-bottom:1px solid #ccc; padding-bottom:4px;">
+                            <h4 style="margin:0; border-bottom:2px solid #333; padding-bottom:6px; text-transform:uppercase; letter-spacing:1px;">
                                 Conciliación Bancaria
                             </h4>
                         </div>
                     </div>
-                    <div class="row mb-3" style="font-size:12px;">
-                        <div class="col-6">
-                            <strong>NIT:</strong> <span t-field="current_company_id.vat"/><br/>
-                            <strong>Cuenta:</strong> <span t-esc="data['cuenta_id'][1]"/>
+
+                    <!-- ── Datos generales ────────────────────────────── -->
+                    <div class="row mb-3" style="font-size:11px; background:#f8f8f8; padding:6px 0; border-bottom:1px solid #ddd;">
+                        <div class="col-4">
+                            <strong>Empresa:</strong>
+                            <span t-field="current_company_id.name"/>
                         </div>
-                        <div class="col-6">
-                            <strong>Al:</strong>
+                        <div class="col-4">
+                            <strong>NIT:</strong>
+                            <span t-field="current_company_id.vat"/><br/>
+                            <strong>Cuenta:</strong>
+                            <span t-esc="data['cuenta_id'][1]"/>
+                        </div>
+                        <div class="col-4" style="text-align:right;">
+                            <t t-if="data.get('fecha_desde')">
+                                <strong>Del:</strong>
+                                <span t-esc="data['fecha_desde']" t-options="{'widget': 'date'}"/>
+                                &#160;
+                                <strong>Al:</strong>
+                            </t>
+                            <t t-else="">
+                                <strong>Al:</strong>
+                            </t>
                             <span t-esc="data['fecha_hasta']" t-options="{'widget': 'date'}"/>
                         </div>
                     </div>
+
                     <t t-set="res" t-value="datos(data)"/>
-                    <div class="row mt-2">
-                        <div class="col-6">
-                            <table class="table table-condensed table-bordered" style="font-size:11px;">
-                                <thead><tr class="table-light"><th colspan="2"><strong>Saldo según banco</strong></th></tr></thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Saldo extracto bancario</td>
-                                        <td class="text-right text-end"><span t-esc="res['saldo_banco']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <strong style="font-size:11px;">Más: Depósitos en tránsito</strong>
-                            <table class="table table-condensed" style="font-size:10px;">
-                                <thead><tr><th>Fecha</th><th>Doc.</th><th>Concepto</th><th class="text-right text-end">Monto</th></tr></thead>
-                                <tbody>
-                                    <tr t-foreach="res['depositos_transito']" t-as="d">
-                                        <td><span t-esc="d['fecha']" t-options="{'widget': 'date'}"/></td>
-                                        <td><span t-esc="d['documento']"/></td>
-                                        <td><span t-esc="d['concepto']"/></td>
-                                        <td class="text-right text-end"><span t-esc="d['monto']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
-                                    </tr>
-                                    <tr><td colspan="3"><strong>Total depósitos en tránsito</strong></td>
-                                        <td class="text-right text-end"><strong><span t-esc="res['total_depositos']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td></tr>
-                                </tbody>
-                            </table>
-                            <strong style="font-size:11px;">Menos: Cheques pendientes</strong>
-                            <table class="table table-condensed" style="font-size:10px;">
-                                <thead><tr><th>Fecha</th><th>Doc.</th><th>Concepto</th><th class="text-right text-end">Monto</th></tr></thead>
-                                <tbody>
-                                    <tr t-foreach="res['cheques_pendientes']" t-as="c">
-                                        <td><span t-esc="c['fecha']" t-options="{'widget': 'date'}"/></td>
-                                        <td><span t-esc="c['documento']"/></td>
-                                        <td><span t-esc="c['concepto']"/></td>
-                                        <td class="text-right text-end"><span t-esc="c['monto']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
-                                    </tr>
-                                    <tr><td colspan="3"><strong>Total cheques pendientes</strong></td>
-                                        <td class="text-right text-end"><strong><span t-esc="res['total_cheques']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td></tr>
-                                </tbody>
-                            </table>
-                            <table class="table table-condensed table-bordered" style="font-size:11px;">
-                                <tbody>
-                                    <tr class="table-light">
-                                        <td><strong>Saldo ajustado banco</strong></td>
-                                        <td class="text-right text-end"><strong><span t-esc="res['saldo_ajustado_banco']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="col-6">
-                            <table class="table table-condensed table-bordered" style="font-size:11px;">
-                                <thead><tr class="table-light"><th colspan="2"><strong>Saldo según libros</strong></th></tr></thead>
-                                <tbody>
-                                    <tr class="table-light">
-                                        <td><strong>Saldo libro contable</strong></td>
-                                        <td class="text-right text-end"><strong><span t-esc="res['saldo_libro']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <table class="table table-condensed table-bordered mt-2" style="font-size:11px;">
+
+                    <!-- ── Cuerpo principal ───────────────────────────── -->
+                    <table class="table table-sm" style="font-size:11px; width:100%;">
+
+                        <!-- Saldo extracto bancario -->
                         <tbody>
-                            <tr>
-                                <td><strong>Diferencia (Banco ajustado - Libros)</strong></td>
-                                <td class="text-right text-end"><strong><span t-esc="res['diferencia']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td>
-                                <td><t t-if="abs(res['diferencia']) &lt; 0.01"><span style="color:green;font-weight:bold;">✓ CONCILIADO</span></t><t t-else=""><span style="color:red;font-weight:bold;">⚠ DIFERENCIA</span></t></td>
+                            <tr style="background:#e8f4fd;">
+                                <td style="width:55%; padding:6px 8px; font-weight:bold; border:1px solid #c0d8ec;">
+                                    Saldo según extracto bancario
+                                </td>
+                                <td style="width:45%; padding:6px 8px; text-align:right; font-weight:bold; border:1px solid #c0d8ec;">
+                                    <span t-esc="res['saldo_banco']"
+                                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                                </td>
                             </tr>
                         </tbody>
+
+                        <!-- Sección MÁS -->
+                        <tbody>
+                            <tr>
+                                <td colspan="2" style="padding:8px 8px 2px; font-weight:bold; font-size:11px; border:none; border-bottom:1px solid #aaa;">
+                                    MÁS: Depósitos y notas de crédito en tránsito
+                                </td>
+                            </tr>
+                            <tr style="background:#f0f0f0; font-size:10px;">
+                                <td style="padding:3px 8px; border:1px solid #ddd;"><strong>Fecha&#160;&#160;&#160;&#160;Doc. / Referencia&#160;&#160;&#160;&#160;Concepto</strong></td>
+                                <td style="padding:3px 8px; text-align:right; border:1px solid #ddd;"><strong>Monto</strong></td>
+                            </tr>
+                            <tr t-foreach="res['depositos_transito']" t-as="d">
+                                <td style="padding:2px 8px; border:1px solid #eee; font-size:10px;">
+                                    <span t-esc="d['fecha']" t-options="{'widget':'date'}"/>
+                                    &#160;&#160;
+                                    <span t-esc="d['documento']"/>
+                                    &#160;&#160;
+                                    <span t-esc="d['concepto']" style="color:#555;"/>
+                                </td>
+                                <td style="padding:2px 8px; text-align:right; border:1px solid #eee; font-size:10px;">
+                                    <span t-esc="d['monto']"
+                                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                                </td>
+                            </tr>
+                            <tr t-if="not res['depositos_transito']">
+                                <td colspan="2" style="padding:2px 8px; font-size:10px; color:#888; font-style:italic; border:1px solid #eee;">
+                                    No hay depósitos en tránsito
+                                </td>
+                            </tr>
+                            <tr style="background:#f0f0f0;">
+                                <td style="padding:4px 8px; border:1px solid #ddd; font-weight:bold; font-size:10px; text-align:right;">
+                                    Total depósitos y notas de crédito en tránsito
+                                </td>
+                                <td style="padding:4px 8px; text-align:right; border:1px solid #ddd; font-weight:bold; font-size:10px;">
+                                    <span t-esc="res['total_depositos']"
+                                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                                </td>
+                            </tr>
+                        </tbody>
+
+                        <!-- Sección MENOS -->
+                        <tbody>
+                            <tr>
+                                <td colspan="2" style="padding:8px 8px 2px; font-weight:bold; font-size:11px; border:none; border-bottom:1px solid #aaa;">
+                                    MENOS: Cheques y notas de débito pendientes
+                                </td>
+                            </tr>
+                            <tr style="background:#f0f0f0; font-size:10px;">
+                                <td style="padding:3px 8px; border:1px solid #ddd;"><strong>Fecha&#160;&#160;&#160;&#160;Doc. / Referencia&#160;&#160;&#160;&#160;Concepto</strong></td>
+                                <td style="padding:3px 8px; text-align:right; border:1px solid #ddd;"><strong>Monto</strong></td>
+                            </tr>
+                            <tr t-foreach="res['cheques_pendientes']" t-as="c">
+                                <td style="padding:2px 8px; border:1px solid #eee; font-size:10px;">
+                                    <span t-esc="c['fecha']" t-options="{'widget':'date'}"/>
+                                    &#160;&#160;
+                                    <span t-esc="c['documento']"/>
+                                    &#160;&#160;
+                                    <span t-esc="c['concepto']" style="color:#555;"/>
+                                </td>
+                                <td style="padding:2px 8px; text-align:right; border:1px solid #eee; font-size:10px;">
+                                    <span t-esc="c['monto']"
+                                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                                </td>
+                            </tr>
+                            <tr t-if="not res['cheques_pendientes']">
+                                <td colspan="2" style="padding:2px 8px; font-size:10px; color:#888; font-style:italic; border:1px solid #eee;">
+                                    No hay cheques ni notas de débito pendientes
+                                </td>
+                            </tr>
+                            <tr style="background:#f0f0f0;">
+                                <td style="padding:4px 8px; border:1px solid #ddd; font-weight:bold; font-size:10px; text-align:right;">
+                                    Total cheques y notas de débito pendientes
+                                </td>
+                                <td style="padding:4px 8px; text-align:right; border:1px solid #ddd; font-weight:bold; font-size:10px;">
+                                    <span t-esc="res['total_cheques']"
+                                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                                </td>
+                            </tr>
+                        </tbody>
+
+                        <!-- Saldo ajustado -->
+                        <tbody>
+                            <tr style="background:#e8f4fd;">
+                                <td style="padding:6px 8px; font-weight:bold; border:1px solid #c0d8ec;">
+                                    Saldo ajustado banco
+                                </td>
+                                <td style="padding:6px 8px; text-align:right; font-weight:bold; border:1px solid #c0d8ec;">
+                                    <span t-esc="res['saldo_ajustado_banco']"
+                                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                                </td>
+                            </tr>
+                        </tbody>
+
+                        <!-- Separador -->
+                        <tbody><tr><td colspan="2" style="border:none; padding:4px;"/></tr></tbody>
+
+                        <!-- Saldo libros -->
+                        <tbody>
+                            <tr style="background:#e8f4fd;">
+                                <td style="padding:6px 8px; font-weight:bold; border:1px solid #c0d8ec;">
+                                    Saldo según libros contables
+                                </td>
+                                <td style="padding:6px 8px; text-align:right; font-weight:bold; border:1px solid #c0d8ec;">
+                                    <span t-esc="res['saldo_libro']"
+                                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                                </td>
+                            </tr>
+                        </tbody>
+
+                        <!-- Diferencia -->
+                        <tbody>
+                            <tr><td colspan="2" style="border:none; padding:4px;"/></tr>
+                            <tr>
+                                <t t-if="abs(res['diferencia']) &lt; 0.01">
+                                    <td style="padding:8px; font-weight:bold; border:2px solid #1a7a1a; background:#d4edda; color:#1a7a1a; font-size:12px;">
+                                        Diferencia (Banco ajustado - Libros)
+                                    </td>
+                                    <td style="padding:8px; text-align:right; font-weight:bold; border:2px solid #1a7a1a; background:#d4edda; color:#1a7a1a; font-size:12px;">
+                                        <span t-esc="res['diferencia']"
+                                              t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                                        &#160; &#10003; CONCILIADO
+                                    </td>
+                                </t>
+                                <t t-else="">
+                                    <td style="padding:8px; font-weight:bold; border:2px solid #c00; background:#fde8e8; color:#c00; font-size:12px;">
+                                        Diferencia (Banco ajustado - Libros)
+                                    </td>
+                                    <td style="padding:8px; text-align:right; font-weight:bold; border:2px solid #c00; background:#fde8e8; color:#c00; font-size:12px;">
+                                        <span t-esc="res['diferencia']"
+                                              t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
+                                        &#160; &#9651; DIFERENCIA
+                                    </td>
+                                </t>
+                            </tr>
+                        </tbody>
+
                     </table>
-                    <div class="row mt-4">
-                        <div class="col-4 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Preparado por</div></div>
-                        <div class="col-4 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Revisado por</div></div>
-                        <div class="col-4 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Autorizado por</div></div>
-                    </div>
                 </div>
             </t>
         </t>
