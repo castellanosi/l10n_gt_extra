@@ -21,6 +21,15 @@ class AsistenteReporteBalanceSaldos(models.TransientModel):
         ('balance', 'Solo Balance General'),
         ('resultados', 'Solo Estado de Resultados'),
     ], string="Filtrar cuentas", required=True, default='todas')
+    # PARCHE_BALANZA_V2
+    incluir_cuentas_cero = fields.Boolean(
+        string="Incluir cuentas en cero",
+        default=False,
+        help="Desmarcado: se listan las cuentas con movimiento en el período "
+             "o con saldo anterior distinto de cero.\n"
+             "Marcado: se listan además todas las cuentas activas del "
+             "catálogo, aunque no tengan saldo ni movimiento."
+    )
     name = fields.Char('Nombre archivo')
     archivo = fields.Binary('Archivo')
 
@@ -30,6 +39,7 @@ class AsistenteReporteBalanceSaldos(models.TransientModel):
             'fecha_desde': self.fecha_desde,
             'fecha_hasta': self.fecha_hasta,
             'filtro_tipo': self.filtro_tipo,
+            'incluir_cuentas_cero': self.incluir_cuentas_cero,
         }
 
     def print_report(self):

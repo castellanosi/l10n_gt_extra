@@ -13,6 +13,8 @@
                     <field name="fecha_desde"/>
                         <field name="fecha_hasta"/>
                         <field name="filtro_tipo"/>
+                        <!-- PARCHE_BALANZA_V2 -->
+                        <field name="incluir_cuentas_cero"/>
                     </group>
                     <group>
                         <field name="name" invisible="1"/>
