@@ -14,7 +14,7 @@
                         <field name="fecha_hasta"/>
                     </group>
                     <group>
-                        <field name="agrupado_por_dia"/>
+                        <field name="modo" widget="radio"/>
                         <field name="name" invisible="1"/>
                         <field name="archivo" readonly="1" filename="name"/>
                     </group>

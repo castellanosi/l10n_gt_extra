@@ -4,6 +4,8 @@ from odoo import api, models, fields
 from odoo.release import version_info
 import logging
 
+from .detalle_comun import lineas_contables
+
 class ReporteDiario(models.AbstractModel):
     _name = 'report.l10n_gt_extra.reporte_diario'
     _description = 'Libro de Diario'
@@ -27,7 +29,31 @@ class ReporteDiario(models.AbstractModel):
             saldo_inicial += m['debe'] - m['haber']
         return saldo_inicial
 
+    def lineas_detalladas(self, datos):
+        """Un bloque por asiento contable, con cada una de sus líneas."""
+        asientos = {}
+        orden = []
+        totales = {'debe': 0, 'haber': 0, 'saldo_inicial': 0, 'saldo_final': 0, 'asientos': 0}
+        for l in lineas_contables(self.env, datos):
+            a = asientos.get(l['asiento_id'])
+            if not a:
+                a = asientos[l['asiento_id']] = {
+                    'fecha': l['fecha'], 'asiento': l['asiento'], 'documento': l['documento'],
+                    'diario': l['diario'], 'tercero': l['tercero'],
+                    'lineas': [], 'total_debe': 0, 'total_haber': 0,
+                }
+                orden.append(l['asiento_id'])
+            a['lineas'].append(l)
+            a['total_debe'] += l['debe']
+            a['total_haber'] += l['haber']
+            totales['debe'] += l['debe']
+            totales['haber'] += l['haber']
+        totales['asientos'] = len(orden)
+        return {'lineas': [asientos[i] for i in orden], 'totales': totales}
+
     def lineas(self, datos):
+        if datos.get('modo') == 'detallado':
+            return self.lineas_detalladas(datos)
         totales = {}
         lineas_resumidas = {}
         lineas=[]
