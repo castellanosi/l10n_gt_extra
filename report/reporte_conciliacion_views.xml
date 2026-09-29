@@ -2,43 +2,15 @@
 <odoo>
     <template id="reporte_conciliacion">
         <t t-call="web.html_container">
-            <t t-set="data_report_page_offset" t-value="data.get('folio_inicial', 1) + 1"/>
-            <t t-call="web.external_layout">
+            <t t-set="data_report_margin_top" t-value="40"/>
+            <t t-set="data_report_header_spacing" t-value="34"/>
+            <t t-call="l10n_gt_extra.encabezado_folio">
+                <t t-set="titulo" t-value="'Conciliación Bancaria'"/>
+            </t>
+            <t t-call="l10n_gt_extra.cuerpo_reporte">
                 <div class="page">
-
-                    <!-- ── Título ─────────────────────────────────────── -->
-                    <div class="row mb-2 mt-2">
-                        <div class="col-12">
-                            <h4 style="margin:0; border-bottom:2px solid #333; padding-bottom:6px; text-transform:uppercase; letter-spacing:1px;">
-                                Conciliación Bancaria
-                            </h4>
-                        </div>
-                    </div>
-
-                    <!-- ── Datos generales ────────────────────────────── -->
-                    <div class="row mb-3" style="font-size:11px; background:#f8f8f8; padding:6px 0; border-bottom:1px solid #ddd;">
-                        <div class="col-4">
-                            <strong>Empresa:</strong>
-                            <span t-field="current_company_id.name"/>
-                        </div>
-                        <div class="col-4">
-                            <strong>NIT:</strong>
-                            <span t-field="current_company_id.vat"/><br/>
-                            <strong>Cuenta:</strong>
-                            <span t-esc="data['cuenta_id'][1]"/>
-                        </div>
-                        <div class="col-4" style="text-align:right;">
-                            <t t-if="data.get('fecha_desde')">
-                                <strong>Del:</strong>
-                                <span t-esc="data['fecha_desde']" t-options="{'widget': 'date'}"/>
-                                &#160;
-                                <strong>Al:</strong>
-                            </t>
-                            <t t-else="">
-                                <strong>Al:</strong>
-                            </t>
-                            <span t-esc="data['fecha_hasta']" t-options="{'widget': 'date'}"/>
-                        </div>
+                    <div style="font-size: 12px; margin-bottom: 8px;">
+                        <strong>Cuenta:</strong> <span t-esc="data['cuenta_id'][1]"/>
                     </div>
 
                     <t t-set="res" t-value="datos(data)"/>

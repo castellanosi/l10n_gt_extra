@@ -18,8 +18,14 @@
                     }
                     var toPage = document.getElementsByClassName('topage');
                     for(var j = 0; j&lt;toPage.length; j++) {
-                        var offset = fromPage[j].textContent || 0;
                         toPage[j].textContent = vars['sitepages'];
+                    }
+                    // Folio de libros: folio inicial + página - 1 (página 1 = folio inicial)
+                    var folios = document.getElementsByClassName('l10n_gt_folio');
+                    for(var j = 0; j&lt;folios.length; j++) {
+                        var inicial = parseInt(folios[j].getAttribute('data-folio-inicial'), 10);
+                        if (isNaN(inicial)) { inicial = 1; }
+                        folios[j].textContent = inicial + parseInt(vars['sitepage'], 10) - 1;
                     }
                     var index = vars['webpage'].split('.', 4)[3]
                     var header = document.getElementById('minimal_layout_report_headers');
@@ -40,5 +46,63 @@
     </template>
     
     <menuitem id="menu_informes" name="Informes de Guatemala" parent="account.menu_finance_reports"/>
+
+
+    <!--
+        Cuerpo del reporte sin encabezado ni pie de la compañía (sin logo ni URL).
+        Se usa DENTRO de web.html_container, en lugar de web.external_layout.
+    -->
+    <template id="cuerpo_reporte">
+        <div class="article l10n_gt_cuerpo">
+            <style>
+                /* Estilo común de libros y reportes: misma letra y líneas en vista previa y PDF */
+                .l10n_gt_cuerpo { font-family: Arial, Helvetica, sans-serif; font-size: 12px; color: #000; }
+                .l10n_gt_cuerpo table { width: 100%; border-collapse: collapse; font-size: 11px !important; }
+                .l10n_gt_cuerpo table th { border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 5px; font-weight: bold; }
+                .l10n_gt_cuerpo table td { border-bottom: 1px solid #999; padding: 3px 5px; }
+                .l10n_gt_cuerpo table tfoot td { border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; }
+                .l10n_gt_cuerpo tr { page-break-inside: avoid; }
+                .l10n_gt_cuerpo thead { display: table-header-group; }
+            </style>
+            <t t-out="0"/>
+        </div>
+    </template>
+
+    <!--
+        Encabezado funcional de libros y reportes contables.
+        Se repite en CADA página del PDF con: empresa, NIT, dirección,
+        nombre del reporte, período y folio (folio inicial + página - 1).
+        Uso: <t t-call="l10n_gt_extra.encabezado_folio"><t t-set="titulo" t-value="'Libro Diario'"/></t>
+    -->
+    <template id="encabezado_folio">
+        <t t-set="cia" t-value="current_company_id"/>
+        <t t-set="dir_cia" t-value="', '.join(x for x in [cia.partner_id.street, cia.partner_id.street2, cia.partner_id.city, cia.partner_id.state_id.name, cia.partner_id.country_id.name] if x)"/>
+        <t t-set="f_ini" t-value="data.get('fecha_desde') or data.get('fecha_inicio')"/>
+        <t t-set="f_fin" t-value="data.get('fecha_hasta') or data.get('fecha_corte')"/>
+        <div class="header" style="font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #000;">
+            <table style="width: 100%; border-bottom: 2px solid #000; border-collapse: collapse;">
+                <tr>
+                    <td style="vertical-align: top; padding-bottom: 4px;">
+                        <strong style="font-size: 19px;" t-esc="cia.name"/><br/>
+                        <strong>NIT:</strong> <span t-esc="cia.vat or ''"/><br/>
+                        <strong>Dirección:</strong> <span t-esc="dir_cia"/>
+                    </td>
+                    <td style="vertical-align: top; text-align: right; padding-bottom: 4px; white-space: nowrap;">
+                        <strong style="font-size: 19px;" t-esc="titulo"/><br/>
+                        <t t-if="f_ini and f_fin">
+                            Del <span t-esc="f_ini" t-options="{'widget': 'date'}"/>
+                            al <span t-esc="f_fin" t-options="{'widget': 'date'}"/>
+                        </t>
+                        <t t-elif="f_fin">
+                            Al <span t-esc="f_fin" t-options="{'widget': 'date'}"/>
+                        </t>
+                        <br/>
+                        <strong>Folio:</strong>
+                        <span class="l10n_gt_folio" t-att-data-folio-inicial="data.get('folio_inicial') or 1" t-esc="data.get('folio_inicial') or 1"/>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </template>
 
 </odoo>

@@ -24,7 +24,18 @@ class AsistenteReporteMayor(models.TransientModel):
 
     cuentas_id = fields.Many2many("account.account", string="Cuentas", required=True, default=_default_cuenta)
     folio_inicial = fields.Integer(string="Folio Inicial", required=True, default=1)
-    agrupado_por_dia = fields.Boolean(string="Agrupado por dia")
+    modo = fields.Selection([
+        ('resumido', 'Resumido por cuenta'),
+        ('por_dia', 'Agrupado por día'),
+        ('detallado', 'Detallado (cada asiento)'),
+    ], string='Tipo de reporte', required=True, default='resumido')
+    # Se conserva para las plantillas y el Excel existentes
+    agrupado_por_dia = fields.Boolean(string="Agrupado por dia", compute='_compute_agrupado_por_dia', store=True)
+
+    @api.depends('modo')
+    def _compute_agrupado_por_dia(self):
+        for w in self:
+            w.agrupado_por_dia = w.modo == 'por_dia'
     fecha_desde = fields.Date(string="Fecha Inicial", required=True, default=lambda self: time.strftime('%Y-%m-01'))
     fecha_hasta = fields.Date(string="Fecha Final", required=True, default=lambda self: time.strftime('%Y-%m-%d'))
     name = fields.Char('Nombre archivo', size=32)
@@ -61,6 +72,7 @@ class AsistenteReporteMayor(models.TransientModel):
             dict['fecha_hasta'] = w['fecha_hasta']
             dict['fecha_desde'] = w['fecha_desde']
             dict['agrupado_por_dia'] = w['agrupado_por_dia']
+            dict['modo'] = w.modo
             dict['cuentas_id'] =[x.id for x in w.cuentas_id]
             res = self.env['report.l10n_gt_extra.reporte_mayor'].lineas(dict)
 
@@ -83,7 +95,33 @@ class AsistenteReporteMayor(models.TransientModel):
             hoja.write(3, 6, w.fecha_hasta, formato_fecha)
 
             y = 5
-            if w['agrupado_por_dia']:
+            if w.modo == 'detallado':
+                for i, h in enumerate(['Codigo', 'Cuenta', 'Fecha', 'Asiento', 'Documento', 'Tercero', 'Etiqueta', 'Debe', 'Haber', 'Saldo']):
+                    hoja.write(y, i, h)
+                for c in res['lineas']:
+                    y += 1
+                    hoja.write(y, 0, c['codigo'])
+                    hoja.write(y, 1, c['cuenta'])
+                    hoja.write(y, 6, 'Saldo inicial')
+                    hoja.write(y, 9, c['saldo_inicial'], formato_numero)
+                    for l in c['movimientos']:
+                        y += 1
+                        hoja.write(y, 0, c['codigo'])
+                        hoja.write(y, 2, l['fecha'], formato_fecha)
+                        hoja.write(y, 3, l['asiento'])
+                        hoja.write(y, 4, l['documento'])
+                        hoja.write(y, 5, l['tercero'])
+                        hoja.write(y, 6, l['etiqueta'])
+                        hoja.write(y, 7, l['debe'], formato_numero)
+                        hoja.write(y, 8, l['haber'], formato_numero)
+                        hoja.write(y, 9, l['saldo'], formato_numero)
+                    y += 1
+                    hoja.write(y, 6, 'Saldo final ' + (c['codigo'] or ''))
+                    hoja.write(y, 7, c['total_debe'], formato_numero)
+                    hoja.write(y, 8, c['total_haber'], formato_numero)
+                    hoja.write(y, 9, c['saldo_final'], formato_numero)
+                    y += 1
+            elif w['agrupado_por_dia']:
                 lineas = res['lineas']
 
                 hoja.write(y, 0, 'Codigo')

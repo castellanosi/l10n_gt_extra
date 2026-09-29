@@ -1,6 +1,8 @@
 # -*- encoding: utf-8 -*-
 
-from odoo import api, models
+import re
+
+from odoo import api, fields, models
 
 
 def _to_str(val, lang='en_US'):
@@ -10,116 +12,129 @@ def _to_str(val, lang='en_US'):
     return val or ''
 
 
+# NIT que NO identifican a una persona: nunca se agrupan entre sí.
+NIT_NO_AGRUPABLES = ('', 'CF', 'CONSUMIDORFINAL')
+
+
+def nit_normalizado(nit):
+    """'7136301-7', ' 71363017 ' y '71363017' dan la misma llave: '71363017'."""
+    return re.sub(r'[^0-9A-Z]', '', (nit or '').upper())
+
+
+def _a_fecha(valor):
+    if not valor:
+        return False
+    if isinstance(valor, str):
+        return fields.Date.from_string(valor)
+    return valor
+
+
 class ReporteCuentasCobrar(models.AbstractModel):
     _name = 'report.l10n_gt_extra.reporte_cuentas_cobrar'
     _description = 'Reporte Consolidado Cuentas por Cobrar'
 
-    def lineas(self, datos):
+    def _documentos_abiertos(self, datos, account_type):
         """
-        Retorna lista consolidada de clientes con saldo acumulado al corte.
-        Incluye antigüedad de saldos: corriente, 30, 60, 90, +90 días.
-        """
-        fecha_corte = datos['fecha_corte']
-        solo_con_saldo = datos.get('solo_con_saldo', True)
-        lang = datos.get('lang', 'en_US')
+        Documentos (líneas de CxC o CxP) con saldo pendiente AL CORTE.
 
+        El saldo de cada documento se calcula a la fecha de corte:
+        importe original menos lo conciliado (pagos, notas de crédito)
+        con fecha menor o igual al corte. Un pago posterior al corte
+        no reduce el saldo. Así funciona también el reporte de
+        antigüedad estándar de Odoo.
+
+        Si hay fecha inicial, solo entran documentos con fecha dentro
+        del rango.
+        """
+        corte = _a_fecha(datos['fecha_corte'])
+        inicio = _a_fecha(datos.get('fecha_inicio'))
+        filtro_inicio = "AND l.date >= %(inicio)s " if inicio else ""
         self.env.cr.execute(
-            "SELECT p.id, p.name AS nombre, p.vat AS nit, "
-            "COALESCE(SUM(l.debit) - SUM(l.credit), 0) AS saldo "
+            "SELECT l.id, l.date, l.date_maturity, "
+            "p.id AS partner_id, cp.id AS comercial_id, "
+            "cp.name AS nombre, COALESCE(NULLIF(cp.vat, ''), p.vat) AS nit, "
+            "l.balance "
+            "- COALESCE((SELECT SUM(pr.amount) FROM account_partial_reconcile pr "
+            "            WHERE pr.debit_move_id = l.id AND pr.max_date <= %(corte)s), 0) "
+            "+ COALESCE((SELECT SUM(pr.amount) FROM account_partial_reconcile pr "
+            "            WHERE pr.credit_move_id = l.id AND pr.max_date <= %(corte)s), 0) "
+            "AS pendiente "
             "FROM account_move_line l "
             "JOIN res_partner p ON l.partner_id = p.id "
+            "JOIN res_partner cp ON cp.id = COALESCE(p.commercial_partner_id, p.id) "
             "JOIN account_account a ON l.account_id = a.id "
             "WHERE l.parent_state = 'posted' "
-            "AND l.date <= %s "
-            "AND l.company_id = %s "
-            "AND a.account_type = 'asset_receivable' "
-            "GROUP BY p.id, p.name, p.vat "
-            "ORDER BY p.name",
-            (fecha_corte, self.env.company.id)
+            "AND l.company_id = %(cia)s "
+            "AND a.account_type = %(tipo)s "
+            "AND l.date <= %(corte)s " + filtro_inicio,
+            {'corte': corte, 'inicio': inicio, 'cia': self.env.company.id, 'tipo': account_type},
         )
-        rows = self.env.cr.dictfetchall()
+        return self.env.cr.dictfetchall(), corte
 
-        totales = {
-            'saldo': 0, 'corriente': 0,
-            'd30': 0, 'd60': 0, 'd90': 0, 'd90mas': 0,
-            'num_clientes': 0,
-        }
+    def _consolidar(self, datos, account_type, signo):
+        """
+        Agrupa los documentos pendientes por NIT (o por contacto si no hay NIT
+        o es CF) y reparte el saldo de CADA documento en su tramo de antigüedad
+        según su fecha de vencimiento.
 
-        lineas = []
-        for r in rows:
-            saldo = float(r['saldo'])
-            if solo_con_saldo and abs(saldo) < 0.01:
+        signo = 1 para CxC (saldo deudor), -1 para CxP (saldo acreedor).
+        """
+        solo_con_saldo = datos.get('solo_con_saldo', True)
+        lang = datos.get('lang', 'en_US')
+        documentos, corte = self._documentos_abiertos(datos, account_type)
+
+        grupos = {}
+        for d in documentos:
+            pendiente = float(d['pendiente'] or 0) * signo
+            if abs(pendiente) < 0.005:
                 continue
-
-            # Calcular antigüedad consultando facturas pendientes del partner
-            corriente, d30, d60, d90, d90mas = self._antiguedad(
-                r['id'], fecha_corte, 'asset_receivable')
-
-            nombre = _to_str(r['nombre'], lang)
-            lineas.append({
-                'partner_id': r['id'],
-                'nombre': nombre,
-                'nit': r['nit'] or 'CF',
-                'saldo': saldo,
-                'corriente': corriente,
-                'd30': d30,
-                'd60': d60,
-                'd90': d90,
-                'd90mas': d90mas,
-            })
-            totales['saldo'] += saldo
-            totales['corriente'] += corriente
-            totales['d30'] += d30
-            totales['d60'] += d60
-            totales['d90'] += d90
-            totales['d90mas'] += d90mas
-            totales['num_clientes'] += 1
-
-        return {'lineas': lineas, 'totales': totales}
-
-    def _antiguedad(self, partner_id, fecha_corte, account_type):
-        """Calcula antigüedad de saldo por tramos de días vencidos."""
-        self.env.cr.execute(
-            "SELECT l.date_maturity, l.date, "
-            "COALESCE(l.debit - l.credit, 0) AS saldo "
-            "FROM account_move_line l "
-            "JOIN account_account a ON l.account_id = a.id "
-            "WHERE l.partner_id = %s AND l.parent_state = 'posted' "
-            "AND l.date <= %s AND l.company_id = %s "
-            "AND a.account_type = %s "
-            "AND (l.debit - l.credit) != 0",
-            (partner_id, fecha_corte, self.env.company.id, account_type)
-        )
-        rows = self.env.cr.dictfetchall()
-
-        from datetime import date
-        if isinstance(fecha_corte, str):
-            from odoo import fields
-            corte = fields.Date.from_string(fecha_corte)
-        else:
-            corte = fecha_corte
-
-        corriente = d30 = d60 = d90 = d90mas = 0.0
-        for r in rows:
-            saldo = float(r['saldo'])
-            vence = r['date_maturity'] or r['date']
-            if isinstance(vence, str):
-                from odoo import fields
-                vence = fields.Date.from_string(vence)
-            dias = (corte - vence).days if vence <= corte else 0
-
-            if dias <= 0:
-                corriente += saldo
-            elif dias <= 30:
-                d30 += saldo
+            nit = nit_normalizado(d['nit'])
+            llave = ('nit', nit) if nit not in NIT_NO_AGRUPABLES else ('contacto', d['comercial_id'])
+            g = grupos.get(llave)
+            if not g:
+                g = grupos[llave] = {
+                    'partner_id': d['comercial_id'],
+                    'nombre': _to_str(d['nombre'], lang),
+                    'nit': d['nit'] or 'CF',
+                    'saldo': 0.0,
+                    'd30': 0.0, 'd60': 0.0, 'd90': 0.0, 'd90mas': 0.0,
+                    '_fecha': d['date'],
+                }
+            elif d['date'] and g['_fecha'] and d['date'] > g['_fecha']:
+                # Con varios contactos del mismo NIT, se muestra el nombre del más reciente
+                g['nombre'] = _to_str(d['nombre'], lang)
+                g['_fecha'] = d['date']
+            vence = _a_fecha(d['date_maturity'] or d['date'])
+            dias = (corte - vence).days
+            if dias <= 30:
+                # 0-30 días: incluye lo que aún no ha vencido
+                g['d30'] += pendiente
             elif dias <= 60:
-                d60 += saldo
+                g['d60'] += pendiente
             elif dias <= 90:
-                d90 += saldo
+                g['d90'] += pendiente
             else:
-                d90mas += saldo
+                g['d90mas'] += pendiente
+            g['saldo'] += pendiente
 
-        return corriente, d30, d60, d90, d90mas
+        lineas = sorted(grupos.values(), key=lambda g: (g['nombre'] or '').lower())
+        if solo_con_saldo:
+            lineas = [g for g in lineas if abs(g['saldo']) >= 0.01]
+
+        totales = {'saldo': 0, 'd30': 0, 'd60': 0, 'd90': 0, 'd90mas': 0}
+        for g in lineas:
+            for k in totales:
+                totales[k] += g[k]
+        return lineas, totales
+
+    def lineas(self, datos):
+        """
+        Clientes con saldo pendiente al corte, agrupados por NIT, con
+        antigüedad por documento: 0-30, 31-60, 61-90, +90 días.
+        """
+        lineas, totales = self._consolidar(datos, 'asset_receivable', 1)
+        totales['num_clientes'] = len(lineas)
+        return {'lineas': lineas, 'totales': totales}
 
     @api.model
     def _get_report_values(self, docids, data=None):
@@ -142,72 +157,12 @@ class ReporteCuentasPagar(models.AbstractModel):
 
     def lineas(self, datos):
         """
-        Retorna lista consolidada de proveedores con saldo acumulado al corte.
-        Incluye antigüedad de saldos: corriente, 30, 60, 90, +90 días.
+        Proveedores con saldo pendiente al corte, agrupados por NIT, con
+        antigüedad por documento: 0-30, 31-60, 61-90, +90 días.
         """
-        fecha_corte = datos['fecha_corte']
-        solo_con_saldo = datos.get('solo_con_saldo', True)
-        lang = datos.get('lang', 'en_US')
-
-        self.env.cr.execute(
-            "SELECT p.id, p.name AS nombre, p.vat AS nit, "
-            "COALESCE(SUM(l.credit) - SUM(l.debit), 0) AS saldo "
-            "FROM account_move_line l "
-            "JOIN res_partner p ON l.partner_id = p.id "
-            "JOIN account_account a ON l.account_id = a.id "
-            "WHERE l.parent_state = 'posted' "
-            "AND l.date <= %s "
-            "AND l.company_id = %s "
-            "AND a.account_type = 'liability_payable' "
-            "GROUP BY p.id, p.name, p.vat "
-            "ORDER BY p.name",
-            (fecha_corte, self.env.company.id)
-        )
-        rows = self.env.cr.dictfetchall()
-
-        cobrar_report = self.env['report.l10n_gt_extra.reporte_cuentas_cobrar']
-
-        totales = {
-            'saldo': 0, 'corriente': 0,
-            'd30': 0, 'd60': 0, 'd90': 0, 'd90mas': 0,
-            'num_proveedores': 0,
-        }
-
-        lineas = []
-        for r in rows:
-            saldo = float(r['saldo'])
-            if solo_con_saldo and abs(saldo) < 0.01:
-                continue
-
-            corriente, d30, d60, d90, d90mas = cobrar_report._antiguedad(
-                r['id'], fecha_corte, 'liability_payable')
-            # Para cuentas por pagar, el saldo es acreedor (positivo = deuda)
-            corriente = abs(corriente)
-            d30 = abs(d30)
-            d60 = abs(d60)
-            d90 = abs(d90)
-            d90mas = abs(d90mas)
-
-            nombre = _to_str(r['nombre'], lang)
-            lineas.append({
-                'partner_id': r['id'],
-                'nombre': nombre,
-                'nit': r['nit'] or 'CF',
-                'saldo': saldo,
-                'corriente': corriente,
-                'd30': d30,
-                'd60': d60,
-                'd90': d90,
-                'd90mas': d90mas,
-            })
-            totales['saldo'] += saldo
-            totales['corriente'] += corriente
-            totales['d30'] += d30
-            totales['d60'] += d60
-            totales['d90'] += d90
-            totales['d90mas'] += d90mas
-            totales['num_proveedores'] += 1
-
+        cobrar = self.env['report.l10n_gt_extra.reporte_cuentas_cobrar']
+        lineas, totales = cobrar._consolidar(datos, 'liability_payable', -1)
+        totales['num_proveedores'] = len(lineas)
         return {'lineas': lineas, 'totales': totales}
 
     @api.model

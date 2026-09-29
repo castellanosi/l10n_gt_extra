@@ -2,28 +2,71 @@
 <odoo>
     <template id="reporte_mayor">
         <t t-call="web.html_container">
-            <t t-set="data_report_margin_top" t-value="30"/>
-            <t t-set="data_report_header_spacing" t-value="20"/>
-            <div class="header">
-                Folio: <span class="page" t-esc="data['folio_inicial']-1"/>
-            </div>
-            <t t-call="web.external_layout">
+            <t t-set="data_report_margin_top" t-value="40"/>
+            <t t-set="data_report_header_spacing" t-value="34"/>
+            <t t-call="l10n_gt_extra.encabezado_folio">
+                <t t-set="titulo" t-value="'Libro Mayor' + {'resumido': ' — Resumido', 'por_dia': ' — Agrupado por día', 'detallado': ' — Detallado'}.get(data.get('modo'), '')"/>
+            </t>
+            <t t-call="l10n_gt_extra.cuerpo_reporte">
                 <div class="page">
-                    <h2><span t-field="current_company_id.name"/>: Libro Mayor</h2>
-
-                    <div class="row my-2">
-                        <div class="col-6">
-                            <strong>Número de identificación tributaria:</strong> <span t-field="current_company_id.vat"/><br/>
-                            <strong>Nombre comercial:</strong> <span t-field="current_company_id.partner_id.name"/><br/>
-                        </div>
-                        <div class="col-6">
-                            <strong>Domicilio fiscal:</strong> <span t-field="current_company_id.partner_id.street"/><br/>
-                            <strong>Registro del:</strong> <span t-esc="data['fecha_desde']" t-options="{'widget': 'date'}"/> al: <span t-esc="data['fecha_hasta']" t-options="{'widget': 'date'}"/><br/>
-                        </div>
-                    </div>
 
                     <t t-set="result" t-value="lineas(data)"/>
 
+                    <t t-if="data.get('modo') == 'detallado'">
+                        <table class="table table-condensed">
+                            <thead>
+                                <tr>
+                                    <th style="width: 10%;">Fecha</th>
+                                    <th style="width: 15%;">Asiento / Doc.</th>
+                                    <th>Tercero / Etiqueta</th>
+                                    <th class="text-right text-end" style="width: 12%;">Debe</th>
+                                    <th class="text-right text-end" style="width: 12%;">Haber</th>
+                                    <th class="text-right text-end" style="width: 13%;">Saldo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="result['lineas']" t-as="c">
+                                    <tr style="background: #f2f2f2;">
+                                        <td colspan="5">
+                                            <strong t-esc="c['codigo']"/> &#160; <strong t-esc="c['cuenta']"/>
+                                            &#160;&#160;— Saldo inicial
+                                        </td>
+                                        <td class="text-right text-end"><strong t-esc="c['saldo_inicial']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                    </tr>
+                                    <tr t-foreach="c['movimientos']" t-as="l">
+                                        <td><span t-esc="l['fecha']" t-options="{'widget': 'date'}"/></td>
+                                        <td>
+                                            <span t-esc="l['asiento']"/>
+                                            <t t-if="l['documento']"><br/><span t-esc="l['documento']"/></t>
+                                        </td>
+                                        <td>
+                                            <span t-esc="l['tercero']"/>
+                                            <t t-if="l['tercero'] and l['etiqueta']"> · </t>
+                                            <span t-esc="l['etiqueta']"/>
+                                        </td>
+                                        <td class="text-right text-end"><span t-esc="l['debe']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                        <td class="text-right text-end"><span t-esc="l['haber']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                        <td class="text-right text-end"><span t-esc="l['saldo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" class="text-right text-end"><strong>Totales y saldo final <span t-esc="c['codigo']"/></strong></td>
+                                        <td class="text-right text-end"><strong t-esc="c['total_debe']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                        <td class="text-right text-end"><strong t-esc="c['total_haber']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                        <td class="text-right text-end"><strong t-esc="c['saldo_final']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3">Totales</td>
+                                    <td class="text-right text-end"><span t-esc="result['totales']['debe']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                    <td class="text-right text-end"><span t-esc="result['totales']['haber']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </t>
+                    <t t-else="">
                     <table class="table table-condensed">
                         <t t-if="data['agrupado_por_dia'] == true">
                             <thead>
@@ -127,6 +170,7 @@
                             </tbody>
                         </t>
                     </table>
+                    </t>
                 </div>
             </t>
         </t>

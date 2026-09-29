@@ -3,6 +3,8 @@
 from odoo import api, models
 from odoo.exceptions import UserError
 
+from .tipos_dte import TIPOS_DTE
+
 
 class ReporteISR(models.AbstractModel):
     _name = 'report.l10n_gt_extra.reporte_isr'
@@ -31,6 +33,11 @@ class ReporteISR(models.AbstractModel):
         impuestos_isr = self.env['account.tax'].browse(datos.get('impuestos_isr_id', []))
 
         facturas = self.env['account.move'].search(filtro)
+        impuestos_ids = set(impuestos_isr.ids)
+        campos = self.env['account.move']._fields
+        fel_nuevo = all(c in campos for c in ('l10n_gt_fel_uuid', 'l10n_gt_fel_serie', 'l10n_gt_fel_numero'))
+        fel_antiguo = 'firma_fel' in campos
+        con_dte_code = 'l10n_gt_fel_dte_code' in campos
 
         lineas = []
         for f in facturas:
@@ -46,7 +53,7 @@ class ReporteISR(models.AbstractModel):
                     partner=f.partner_id,
                 )
                 for impuesto in r['taxes']:
-                    if impuesto['id'] in [i.id for i in impuestos_isr]:
+                    if impuesto['id'] in impuestos_ids:
                         isr_total += impuesto['amount']
                         base_total += r['total_excluded']
 
@@ -59,8 +66,13 @@ class ReporteISR(models.AbstractModel):
             totales['total'] += f.amount_total
 
             numero = f.ref or f.name or '-'
-            if 'firma_fel' in f.fields_get() and f.firma_fel:
+            if fel_antiguo and f.firma_fel:
                 numero = '{}-{}'.format(f.serie_fel, f.numero_fel)
+            if fel_nuevo and f.l10n_gt_fel_uuid:
+                numero = '%s-%s' % (f.l10n_gt_fel_serie or '', f.l10n_gt_fel_numero or '')
+            tipo = 'NC' if 'refund' in (f.move_type or '') else 'FACT'
+            if con_dte_code and f.l10n_gt_fel_dte_code in TIPOS_DTE:
+                tipo = f.l10n_gt_fel_dte_code
 
             lineas.append({
                 'fecha': f.invoice_date or f.date,
@@ -70,7 +82,7 @@ class ReporteISR(models.AbstractModel):
                 'base': base_total,
                 'isr': isr_total,
                 'total': f.amount_total,
-                'tipo': 'NC' if 'refund' in (f.move_type or '') else 'FACT',
+                'tipo': tipo,
             })
 
         lineas = sorted(lineas, key=lambda l: str(l['fecha']) + str(l['numero']))
