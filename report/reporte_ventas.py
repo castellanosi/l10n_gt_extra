@@ -4,6 +4,8 @@ from odoo import api, models
 from odoo.exceptions import UserError
 import logging
 
+from .tipos_dte import TIPOS_DTE
+
 class ReporteVentas(models.AbstractModel):
     _name = 'report.l10n_gt_extra.reporte_ventas'
     _description = 'Libro de Ventas'
@@ -26,13 +28,26 @@ class ReporteVentas(models.AbstractModel):
             ('amount_total','!=',0),
         ]
         
-        if 'type' in self.env['account.move'].fields_get():
+        # Campos opcionales: se revisan UNA vez (antes se llamaba fields_get() por factura)
+        campos_move = self.env['account.move']._fields
+        campos_diario = self.env['account.journal']._fields
+        tiene_type = 'type' in campos_move
+        tiene_gface = 'firma_gface' in campos_move
+        tiene_fel_antiguo = 'firma_fel' in campos_move
+        tiene_fel_nuevo = 'l10n_gt_fel_uuid' in campos_move and 'l10n_gt_fel_serie' in campos_move and 'l10n_gt_fel_numero' in campos_move
+        tiene_dte_code = 'l10n_gt_fel_dte_code' in campos_move
+        tiene_fel_state = 'l10n_gt_fel_state' in campos_move
+        tiene_resolucion = 'requiere_resolucion' in campos_diario
+
+        if tiene_type:
             filtro.append(('type','in',['out_invoice','out_refund']))
         else:
             filtro.append(('move_type','in',['out_invoice','out_refund']))
 
         facturas = self.env['account.move'].search(filtro)
         impuestos = self.env['account.tax'].browse(datos['impuestos_id'])
+        impuestos_ids = set(impuestos.ids)
+        tasas_por_compania = {}
 
         lineas = []
         for f in facturas:
@@ -42,7 +57,7 @@ class ReporteVentas(models.AbstractModel):
             if f.currency_id.id != f.company_id.currency_id.id:
                 # Probar con impuesto inicialmente
                 for l in f.invoice_line_ids:
-                    if any(impuesto in l.tax_ids for impuesto in impuestos):
+                    if impuestos_ids.intersection(l.tax_ids.ids):
                         if l.amount_currency != 0:
                             tipo_cambio = l.balance/l.amount_currency
                 
@@ -56,14 +71,22 @@ class ReporteVentas(models.AbstractModel):
                         tipo_cambio = abs(total / f.amount_total)
 
             if f.company_id.id != self.env.company.id:
-                tipo_cambio = self.env['res.currency']._get_conversion_rate(f.company_id.currency_id, self.env.company.currency_id)
+                if f.company_id.id not in tasas_por_compania:
+                    tasas_por_compania[f.company_id.id] = self.env['res.currency']._get_conversion_rate(f.company_id.currency_id, self.env.company.currency_id)
+                tipo_cambio = tasas_por_compania[f.company_id.id]
 
             tipo = 'FACT'
-            tipo_interno_factura = f.type if 'type' in f.fields_get() else f.move_type
+            tipo_interno_factura = f.type if tiene_type else f.move_type
             if tipo_interno_factura != 'out_invoice':
                 tipo = 'NC'
             if f.nota_debito:
                 tipo = 'ND'
+
+            # 'tipo' se usa para la lógica (signo NC). 'tipo_mostrar' es lo que se imprime:
+            # si la factura tiene tipo de DTE del integrador FEL (FACT, FPEQ, NCRE...), se muestra ese.
+            tipo_mostrar = tipo
+            if tiene_dte_code and f.l10n_gt_fel_dte_code in TIPOS_DTE:
+                tipo_mostrar = f.l10n_gt_fel_dte_code
 
             numero = f.name or '-'
 
@@ -72,18 +95,26 @@ class ReporteVentas(models.AbstractModel):
                 numero = f.ref
 
             # Por si usa factura electrónica
-            if 'firma_gface' in f.fields_get() and f.firma_gface:
+            if tiene_gface and f.firma_gface:
                 numero = str(f.ref)
-            if 'firma_fel' in f.fields_get() and f.firma_fel:
+            if tiene_fel_antiguo and f.firma_fel:
                 numero = str(f.serie_fel) + '-' + str(f.numero_fel)
+            if tiene_fel_nuevo and f.l10n_gt_fel_uuid:
+                numero = '%s-%s' % (f.l10n_gt_fel_serie or '', f.l10n_gt_fel_numero or '')
 
             # Por si usa tickets
-            if 'requiere_resolucion' in f.journal_id.fields_get() and f.journal_id.requiere_resolucion:
+            if tiene_resolucion and f.journal_id.requiere_resolucion:
                 numero = f.ref
+
+            # Anulada: cancelada en Odoo, o DTE anulado ante la SAT aunque el asiento siga publicado.
+            # Aparece en el libro con fecha, tipo, serie y numero, pero con montos en cero.
+            anulada = f.state == 'cancel' or (tiene_fel_state and f.l10n_gt_fel_state == 'anulado')
+            if anulada:
+                numero = '%s (ANULADA)' % (numero or '')
 
             linea = {
                 'estado': f.state,
-                'tipo': tipo,
+                'tipo': tipo_mostrar,
                 'fecha': f.date,
                 'numero': numero,
                 'cliente': f.partner_id.name,
@@ -101,7 +132,7 @@ class ReporteVentas(models.AbstractModel):
                 'total': 0
             }
 
-            if f.state == 'cancel':
+            if anulada:
                 lineas.append(linea)
                 continue
 
@@ -124,11 +155,11 @@ class ReporteVentas(models.AbstractModel):
                 totales[tipo_linea]['total'] += r['total_excluded']
                 
                 # No es exenta si trae el impuesto seleccionado en el wizard
-                if any(impuesto in l.tax_ids for impuesto in impuestos):
+                if impuestos_ids.intersection(l.tax_ids.ids):
                     linea[tipo_linea] += r['total_excluded']
                     totales[tipo_linea]['neto'] += r['total_excluded']
                     for i in r['taxes']:
-                        if i['id'] in [impuesto.id for impuesto in impuestos]:
+                        if i['id'] in impuestos_ids:
                             linea['iva'] += i['amount']
                             totales[tipo_linea]['iva'] += i['amount']
                             totales[tipo_linea]['total'] += i['amount']

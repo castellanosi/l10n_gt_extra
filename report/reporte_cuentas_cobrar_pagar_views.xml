@@ -23,7 +23,13 @@
                             <strong>Empresa:</strong> <span t-field="current_company_id.partner_id.name"/>
                         </div>
                         <div class="col-6">
-                            <strong>Al corte del:</strong>
+                            <t t-if="data.get('fecha_inicio')">
+                                <strong>Documentos del:</strong>
+                                <span t-esc="data['fecha_inicio']" t-options="{'widget': 'date'}"/>
+                                <strong>al</strong>
+                                <span t-esc="data['fecha_corte']" t-options="{'widget': 'date'}"/><br/>
+                            </t>
+                            <strong>Saldo al corte del:</strong>
                             <span t-esc="data['fecha_corte']" t-options="{'widget': 'date'}"/><br/>
                             <t t-if="data.get('solo_con_saldo')">
                                 <small style="color:#888;">Solo clientes con saldo pendiente</small>
@@ -122,7 +128,13 @@
                             <strong>Empresa:</strong> <span t-field="current_company_id.partner_id.name"/>
                         </div>
                         <div class="col-6">
-                            <strong>Al corte del:</strong>
+                            <t t-if="data.get('fecha_inicio')">
+                                <strong>Documentos del:</strong>
+                                <span t-esc="data['fecha_inicio']" t-options="{'widget': 'date'}"/>
+                                <strong>al</strong>
+                                <span t-esc="data['fecha_corte']" t-options="{'widget': 'date'}"/><br/>
+                            </t>
+                            <strong>Saldo al corte del:</strong>
                             <span t-esc="data['fecha_corte']" t-options="{'widget': 'date'}"/><br/>
                             <t t-if="data.get('solo_con_saldo')">
                                 <small style="color:#888;">Solo proveedores con saldo pendiente</small>

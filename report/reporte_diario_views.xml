@@ -5,7 +5,7 @@
             <t t-set="data_report_margin_top" t-value="30"/>
             <t t-set="data_report_header_spacing" t-value="20"/>
             <div class="header">
-                Folio: <span class="page" t-esc="data['folio_inicial']-1"/>
+                Folio: <span class="l10n_gt_folio" t-att-data-folio-inicial="data['folio_inicial']" t-esc="data['folio_inicial']"/>
             </div>
             <t t-call="web.external_layout">
                 <div class="page">

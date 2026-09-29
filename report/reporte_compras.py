@@ -4,6 +4,8 @@ from odoo import api, models
 from odoo.exceptions import UserError
 import logging
 
+from .tipos_dte import TIPOS_DTE
+
 class ReporteCompras(models.AbstractModel):
     _name = 'report.l10n_gt_extra.reporte_compras'
     _description = 'Libro de Compras'
@@ -20,20 +22,30 @@ class ReporteCompras(models.AbstractModel):
 
         journal_ids = [x for x in datos['diarios_id']]
         filtro = [
-            ('state','in',['posted']),
+            ('state','in',['posted','cancel']),
             ('journal_id','in',journal_ids),
             ('date','<=',datos['fecha_hasta']),
             ('date','>=',datos['fecha_desde']),
             ('amount_total','!=',0),
         ]
         
-        if 'type' in self.env['account.move'].fields_get():
+        # Campos opcionales: se revisan UNA vez (antes se llamaba fields_get() por factura)
+        campos_move = self.env['account.move']._fields
+        tiene_type = 'type' in campos_move
+        tiene_fel_antiguo = 'firma_fel' in campos_move
+        tiene_fel_nuevo = 'l10n_gt_fel_uuid' in campos_move and 'l10n_gt_fel_serie' in campos_move and 'l10n_gt_fel_numero' in campos_move
+        tiene_dte_code = 'l10n_gt_fel_dte_code' in campos_move
+        tiene_fel_state = 'l10n_gt_fel_state' in campos_move
+
+        if tiene_type:
             filtro.append(('type','in',['in_invoice','in_refund']))
         else:
             filtro.append(('move_type','in',['in_invoice','in_refund']))
         
         facturas = self.env['account.move'].search(filtro)
         impuestos = self.env['account.tax'].browse(datos['impuestos_id'])
+        impuestos_ids = set(impuestos.ids)
+        tasas_por_compania = {}
 
         lineas = []
         for f in facturas:
@@ -43,7 +55,7 @@ class ReporteCompras(models.AbstractModel):
             if f.currency_id.id != f.company_id.currency_id.id:
                 # Probar con impuesto inicialmente
                 for l in f.invoice_line_ids:
-                    if any(impuesto in l.tax_ids for impuesto in impuestos):
+                    if impuestos_ids.intersection(l.tax_ids.ids):
                         if l.amount_currency != 0:
                             tipo_cambio = l.balance/l.amount_currency
                 
@@ -57,26 +69,41 @@ class ReporteCompras(models.AbstractModel):
                         tipo_cambio = abs(total / f.amount_total)
 
             if f.company_id.id != self.env.company.id:
-                tipo_cambio = self.env['res.currency']._get_conversion_rate(f.company_id.currency_id, self.env.company.currency_id)
+                if f.company_id.id not in tasas_por_compania:
+                    tasas_por_compania[f.company_id.id] = self.env['res.currency']._get_conversion_rate(f.company_id.currency_id, self.env.company.currency_id)
+                tipo_cambio = tasas_por_compania[f.company_id.id]
 
             tipo = 'FACT'
-            tipo_interno_factura = f.type if 'type' in f.fields_get() else f.move_type
+            tipo_interno_factura = f.type if tiene_type else f.move_type
             if tipo_interno_factura != 'in_invoice':
                 tipo = 'NC'
             if f.nota_debito:
                 tipo = 'ND'
             if f.partner_id.pequenio_contribuyente:
                 tipo += ' PEQ'
+
+            # 'tipo' se usa para la lógica (sin cambios). 'tipo_mostrar' es lo que se imprime.
+            tipo_mostrar = tipo
+            if tiene_dte_code and f.l10n_gt_fel_dte_code in TIPOS_DTE:
+                tipo_mostrar = f.l10n_gt_fel_dte_code
            
             numero = f.ref or ''
             
             # Por si usa factura electrónica
-            if 'firma_fel' in f.fields_get() and f.firma_fel:
+            if tiene_fel_antiguo and f.firma_fel:
                 numero = str(f.serie_fel) + '-' + str(f.numero_fel)
+            if tiene_fel_nuevo and f.l10n_gt_fel_uuid:
+                numero = '%s-%s' % (f.l10n_gt_fel_serie or '', f.l10n_gt_fel_numero or '')
+
+            # Anulada: cancelada en Odoo, o DTE marcado como anulado.
+            # Aparece en el libro con fecha, tipo, serie y numero, pero con montos en cero.
+            anulada = f.state == 'cancel' or (tiene_fel_state and f.l10n_gt_fel_state == 'anulado')
+            if anulada:
+                numero = '%s (ANULADA)' % (numero or '')
 
             linea = {
                 'estado': f.state,
-                'tipo': tipo,
+                'tipo': tipo_mostrar,
                 'fecha': f.invoice_date,
                 'numero': numero,
                 'proveedor': f.partner_id,
@@ -94,6 +121,10 @@ class ReporteCompras(models.AbstractModel):
                 'iva': 0,
                 'total': 0
             }
+
+            if anulada:
+                lineas.append(linea)
+                continue
 
             for l in f.invoice_line_ids:
                 precio = ( l.price_unit * (1-(l.discount or 0.0)/100.0) ) * tipo_cambio
@@ -117,11 +148,11 @@ class ReporteCompras(models.AbstractModel):
                 totales[tipo_linea]['total'] += r['total_excluded']
 
                 # No es exenta si trae el impuesto seleccionado en el wizard
-                if any(impuesto in l.tax_ids for impuesto in impuestos):
+                if impuestos_ids.intersection(l.tax_ids.ids):
                     linea[tipo_linea] += r['total_excluded']
                     totales[tipo_linea]['neto'] += r['total_excluded']
                     for i in r['taxes']:
-                        if i['id'] in [impuesto.id for impuesto in impuestos]:
+                        if i['id'] in impuestos_ids:
                             linea['iva'] += i['amount']
                             totales[tipo_linea]['iva'] += i['amount']
                             totales[tipo_linea]['total'] += i['amount']

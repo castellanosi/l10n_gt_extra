@@ -12,8 +12,13 @@ class AsistenteReporteCuentasCobrar(models.TransientModel):
     _description = 'Reporte Cuentas por Cobrar'
 
     folio_inicial = fields.Integer(string='Folio Inicial', required=True, default=1)
+    fecha_inicio = fields.Date(
+        string='Fecha inicial',
+        help='Opcional. Solo incluye documentos con fecha desde este día. '
+             'Vacío: todos los documentos pendientes hasta la fecha final.',
+    )
     fecha_corte = fields.Date(
-        string='Al corte del', required=True,
+        string='Fecha final (corte)', required=True,
         default=lambda self: time.strftime('%Y-%m-%d'),
     )
     solo_con_saldo = fields.Boolean(
@@ -26,6 +31,7 @@ class AsistenteReporteCuentasCobrar(models.TransientModel):
     def _build_dict(self):
         return {
             'folio_inicial': self.folio_inicial,
+            'fecha_inicio': self.fecha_inicio,
             'fecha_corte': self.fecha_corte,
             'solo_con_saldo': self.solo_con_saldo,
             'lang': self.env.lang or 'en_US',
@@ -62,7 +68,11 @@ class AsistenteReporteCuentasCobrar(models.TransientModel):
         fmt_total = libro.add_format({'bold': True, 'bg_color': '#e8e4f5', 'num_format': '#,##0.00'})
 
         hoja.write(0, 0, self.env.company.name + ': Cuentas por Cobrar', fmt_bold)
-        hoja.write(1, 0, 'Al corte del: {}'.format(self.fecha_corte))
+        if self.fecha_inicio:
+            hoja.write(1, 0, 'Documentos del {} al {} (saldo al {})'.format(
+                self.fecha_inicio, self.fecha_corte, self.fecha_corte))
+        else:
+            hoja.write(1, 0, 'Al corte del: {}'.format(self.fecha_corte))
 
         y = 3
         cols = ['Cliente', 'NIT', 'Corriente', '1-30 días', '31-60 días',
@@ -106,8 +116,13 @@ class AsistenteReporteCuentasPagar(models.TransientModel):
     _description = 'Reporte Cuentas por Pagar'
 
     folio_inicial = fields.Integer(string='Folio Inicial', required=True, default=1)
+    fecha_inicio = fields.Date(
+        string='Fecha inicial',
+        help='Opcional. Solo incluye documentos con fecha desde este día. '
+             'Vacío: todos los documentos pendientes hasta la fecha final.',
+    )
     fecha_corte = fields.Date(
-        string='Al corte del', required=True,
+        string='Fecha final (corte)', required=True,
         default=lambda self: time.strftime('%Y-%m-%d'),
     )
     solo_con_saldo = fields.Boolean(
@@ -120,6 +135,7 @@ class AsistenteReporteCuentasPagar(models.TransientModel):
     def _build_dict(self):
         return {
             'folio_inicial': self.folio_inicial,
+            'fecha_inicio': self.fecha_inicio,
             'fecha_corte': self.fecha_corte,
             'solo_con_saldo': self.solo_con_saldo,
             'lang': self.env.lang or 'en_US',
@@ -156,7 +172,11 @@ class AsistenteReporteCuentasPagar(models.TransientModel):
         fmt_total = libro.add_format({'bold': True, 'bg_color': '#fde68a', 'num_format': '#,##0.00'})
 
         hoja.write(0, 0, self.env.company.name + ': Cuentas por Pagar', fmt_bold)
-        hoja.write(1, 0, 'Al corte del: {}'.format(self.fecha_corte))
+        if self.fecha_inicio:
+            hoja.write(1, 0, 'Documentos del {} al {} (saldo al {})'.format(
+                self.fecha_inicio, self.fecha_corte, self.fecha_corte))
+        else:
+            hoja.write(1, 0, 'Al corte del: {}'.format(self.fecha_corte))
 
         y = 3
         cols = ['Proveedor', 'NIT', 'Corriente', '1-30 días', '31-60 días',

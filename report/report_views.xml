@@ -18,8 +18,14 @@
                     }
                     var toPage = document.getElementsByClassName('topage');
                     for(var j = 0; j&lt;toPage.length; j++) {
-                        var offset = fromPage[j].textContent || 0;
                         toPage[j].textContent = vars['sitepages'];
+                    }
+                    // Folio de libros: folio inicial + página - 1 (página 1 = folio inicial)
+                    var folios = document.getElementsByClassName('l10n_gt_folio');
+                    for(var j = 0; j&lt;folios.length; j++) {
+                        var inicial = parseInt(folios[j].getAttribute('data-folio-inicial'), 10);
+                        if (isNaN(inicial)) { inicial = 1; }
+                        folios[j].textContent = inicial + parseInt(vars['sitepage'], 10) - 1;
                     }
                     var index = vars['webpage'].split('.', 4)[3]
                     var header = document.getElementById('minimal_layout_report_headers');

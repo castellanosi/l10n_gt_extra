@@ -2,6 +2,8 @@
 import re
 from odoo import api, models
 
+from .reporte_cuentas_cobrar_pagar import NIT_NO_AGRUPABLES, nit_normalizado
+
 
 def _strip_html(val):
     """Limpia etiquetas HTML del campo narration (Html field en Odoo 18)."""
@@ -24,16 +26,34 @@ class ReporteEstadoCuenta(models.AbstractModel):
     _name = 'report.l10n_gt_extra.reporte_estado_cuenta'
     _description = 'Estado de Cuenta por Cliente / Proveedor'
 
+    def _partner_ids(self, datos):
+        """
+        Contactos que forman la misma cuenta: el elegido, sus contactos
+        hijos y todos los que tengan el mismo NIT (duplicados creados por la
+        tienda, por ejemplo). Con NIT vacío o CF, solo el contacto y sus hijos.
+        """
+        partner = self.env['res.partner'].browse(datos['partner_id'][0]).commercial_partner_id
+        ids = set(self.env['res.partner'].with_context(active_test=False).search(
+            [('id', 'child_of', partner.id)]).ids)
+        nit = nit_normalizado(partner.vat)
+        if nit not in NIT_NO_AGRUPABLES:
+            self.env.cr.execute(
+                "SELECT id FROM res_partner "
+                "WHERE regexp_replace(upper(COALESCE(vat, '')), '[^0-9A-Z]', '', 'g') = %s",
+                (nit,))
+            ids.update(r[0] for r in self.env.cr.fetchall())
+        return tuple(ids)
+
     def saldo_anterior(self, datos):
-        partner_id = datos['partner_id'][0]
+        partner_ids = self._partner_ids(datos)
         self.env.cr.execute(
             "SELECT COALESCE(SUM(l.debit) - SUM(l.credit), 0) AS saldo "
             "FROM account_move_line l "
             "JOIN account_account a ON l.account_id = a.id "
-            "WHERE l.partner_id = %s AND l.parent_state = 'posted' "
+            "WHERE l.partner_id IN %s AND l.parent_state = 'posted' "
             "AND l.date < %s AND l.company_id = %s "
             "AND a.account_type IN ('asset_receivable','liability_payable')",
-            (partner_id, datos['fecha_desde'], self.env.company.id)
+            (partner_ids, datos['fecha_desde'], self.env.company.id)
         )
         row = self.env.cr.dictfetchone()
         return row['saldo'] if row else 0
@@ -105,7 +125,7 @@ class ReporteEstadoCuenta(models.AbstractModel):
         return result
 
     def lineas(self, datos):
-        partner_id = datos['partner_id'][0]
+        partner_ids = self._partner_ids(datos)
         company_id = self.env.company.id
 
         TIPOS_DEBE    = ('out_invoice', 'in_refund')
@@ -125,14 +145,14 @@ class ReporteEstadoCuenta(models.AbstractModel):
             JOIN account_account a ON l.account_id = a.id
             JOIN account_move    m ON l.move_id = m.id
             LEFT JOIN account_bank_statement_line bsl ON bsl.move_id = m.id
-            WHERE l.partner_id   = %s
+            WHERE l.partner_id   IN %s
               AND l.parent_state = 'posted'
               AND l.date        >= %s
               AND l.date        <= %s
               AND l.company_id  = %s
               AND a.account_type IN ('asset_receivable','liability_payable')
             ORDER BY l.date, m.name
-        """, (partner_id, datos['fecha_desde'], datos['fecha_hasta'], company_id))
+        """, (partner_ids, datos['fecha_desde'], datos['fecha_hasta'], company_id))
 
         rows    = self.env.cr.dictfetchall()
         sal_ant = self.saldo_anterior(datos)
