@@ -13,7 +13,7 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.51` (sep. 2026). En producción en las 4 bases de
+- **Versión:** `18.0.5.52` (sep. 2026). En producción en las 4 bases de
   SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
@@ -47,14 +47,19 @@ integrador FEL.** Por eso:
 
 Los reportes entienden los dos, sin depender de ninguno.
 
-**Importador de XML** (bases de SOLUCONTA): guarda `fel_tipo_documento`
-(FPEQ, FACT…), `fel_afiliacion_iva` (PEQ, GEN) y usa `firma_fel`,
-`serie_fel`, `numero_fel` como el integrador antiguo.
+**Bases de SOLUCONTA (importador de XML):** usan `firma_fel`,
+`serie_fel`, `numero_fel` como el integrador antiguo. **No guardan el
+tipo real de cada DTE**: `fel_tipo_documento` y `fel_afiliacion_iva`
+existen, pero son **calculados por `l10n_gt_peq`** desde el régimen de
+la empresa (`_compute_fel_fields`), no desde el documento. En 5.51 se
+leyeron y el libro de compras de una empresa PEQ salió todo `FPEQ`; se
+revirtió en 5.52. **No volver a usarlos.** Las compras tampoco tienen el
+XML adjunto.
 
 El tipo de DTE se obtiene con `campos_tipo_dte()` + `codigo_dte()` de
-`report/tipos_dte.py`, que revisa en orden `l10n_gt_fel_dte_code` y
-`fel_tipo_documento`. Para un módulo nuevo que guarde el tipo en otro
-campo, agregarlo a `CAMPOS_TIPO_DTE`.
+`report/tipos_dte.py` (hoy solo `l10n_gt_fel_dte_code`). Cuando el
+importador guarde el tipo real en un campo propio, agregarlo a
+`CAMPOS_TIPO_DTE`.
 
 `report/tipos_dte.py` tiene el catálogo de los 18 tipos de DTE del
 manual FEL de la SAT (FACT, FCAM, FPEQ, FCAP, FESP, NABN, RDON, RECI,
@@ -237,6 +242,7 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 
 | Versión | Cambio principal |
 |---|---|
+| 5.52 | Revertido: no leer `fel_tipo_documento` (calculado por régimen de la empresa) |
 | 5.51 | Tipo de DTE también desde `fel_tipo_documento` (importador de XML); diario y mayor detallados; ISR con serie-número (PR #6 y siguiente) |
 | 5.50 | Tipos DTE SAT, serie-número FEL, anuladas en cero, rendimiento; CxC/CxP por documento, fecha inicial, agrupación por NIT; estado de cuenta consolidado con documentos DTE; encabezado único con folio por página y estilo común (PR #3 y #4) |
 | 5.49 | Balanza: cuentas con saldo arrastrado sin movimiento |
