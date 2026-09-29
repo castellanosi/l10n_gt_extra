@@ -26,10 +26,17 @@ TIPOS_DTE = {
 }
 
 
-# Campos donde otros módulos guardan el tipo de DTE, en orden de prioridad:
-# - l10n_gt_fel_dte_code: odoo_fel_integrador (facturas emitidas por la tienda)
-# - fel_tipo_documento: importador de XML (facturas cargadas desde el DTE)
-CAMPOS_TIPO_DTE = ('l10n_gt_fel_dte_code', 'fel_tipo_documento')
+# Campos donde otros módulos guardan el tipo REAL de cada DTE, en orden de prioridad.
+# - l10n_gt_fel_dte_code: odoo_fel_integrador (tipo con el que se certificó el documento).
+#
+# NO usar fel_tipo_documento ni fel_afiliacion_iva (módulo l10n_gt_peq): son campos
+# CALCULADOS desde el régimen de la EMPRESA, no del documento. En una empresa PEQ
+# todas las compras salen FPEQ y una entidad que emite recibos por donación sale FACT.
+# Comprobado en producción el 29/09/2026 (v18.0.5.51, revertido en 5.52).
+#
+# Cuando el importador de XML guarde el tipo real del DTE en un campo propio,
+# agregarlo aquí.
+CAMPOS_TIPO_DTE = ('l10n_gt_fel_dte_code',)
 
 
 def campos_tipo_dte(model):
