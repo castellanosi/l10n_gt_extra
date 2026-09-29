@@ -5,13 +5,62 @@
             <t t-set="data_report_margin_top" t-value="40"/>
             <t t-set="data_report_header_spacing" t-value="34"/>
             <t t-call="l10n_gt_extra.encabezado_folio">
-                <t t-set="titulo" t-value="'Libro Diario'"/>
+                <t t-set="titulo" t-value="'Libro Diario' + {'resumido': ' — Resumido', 'por_dia': ' — Agrupado por día', 'detallado': ' — Detallado'}.get(data.get('modo'), '')"/>
             </t>
             <t t-call="l10n_gt_extra.cuerpo_reporte">
                 <div class="page">
                     
                     <t t-set="result" t-value="lineas(data)"/>
                     
+                    <t t-if="data.get('modo') == 'detallado'">
+                        <table class="table table-condensed">
+                            <thead>
+                                <tr>
+                                    <th style="width: 11%;">Código</th>
+                                    <th>Cuenta</th>
+                                    <th>Tercero / Etiqueta</th>
+                                    <th class="text-right text-end" style="width: 13%;">Debe</th>
+                                    <th class="text-right text-end" style="width: 13%;">Haber</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="result['lineas']" t-as="a">
+                                    <tr style="background: #f2f2f2;">
+                                        <td colspan="5">
+                                            <strong t-esc="a['fecha']" t-options="{'widget': 'date'}"/>
+                                            &#160;&#160;<strong t-esc="a['asiento']"/>
+                                            <t t-if="a['documento']">&#160;&#160;Doc: <span t-esc="a['documento']"/></t>
+                                            &#160;&#160;<span t-esc="a['diario']"/>
+                                        </td>
+                                    </tr>
+                                    <tr t-foreach="a['lineas']" t-as="l">
+                                        <td><span t-esc="l['codigo']"/></td>
+                                        <td><span t-esc="l['cuenta']"/></td>
+                                        <td>
+                                            <span t-esc="l['tercero']"/>
+                                            <t t-if="l['tercero'] and l['etiqueta']"> · </t>
+                                            <span t-esc="l['etiqueta']"/>
+                                        </td>
+                                        <td class="text-right text-end"><span t-esc="l['debe']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                        <td class="text-right text-end"><span t-esc="l['haber']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" class="text-right text-end"><strong>Total asiento</strong></td>
+                                        <td class="text-right text-end"><strong t-esc="a['total_debe']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                        <td class="text-right text-end"><strong t-esc="a['total_haber']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3">Totales (<span t-esc="result['totales']['asientos']"/> asientos)</td>
+                                    <td class="text-right text-end"><span t-esc="result['totales']['debe']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                    <td class="text-right text-end"><span t-esc="result['totales']['haber']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </t>
+                    <t t-else="">
                     <table class="table table-condensed">
                         <t t-if="data['agrupado_por_dia'] == true">
                             <thead>
@@ -105,6 +154,7 @@
                             </tbody>
                         </t>
                     </table>
+                    </t>
                 </div>
             </t>
         </t>

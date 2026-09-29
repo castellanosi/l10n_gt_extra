@@ -4,6 +4,8 @@ from odoo import api, models, fields
 from odoo.release import version_info
 import logging
 
+from .detalle_comun import lineas_contables
+
 class ReporteMayor(models.AbstractModel):
     _name = 'report.l10n_gt_extra.reporte_mayor'
     _description = 'Libro de Mayor'
@@ -27,7 +29,40 @@ class ReporteMayor(models.AbstractModel):
             saldo_inicial += m['debe'] - m['haber']
         return saldo_inicial
 
+    def lineas_detalladas(self, datos):
+        """Por cuenta: saldo inicial, cada movimiento con su saldo acumulado y saldo final."""
+        cuentas = {}
+        totales = {'debe': 0, 'haber': 0, 'saldo_inicial': 0, 'saldo_final': 0}
+        for l in lineas_contables(self.env, datos):
+            c = cuentas.get(l['cuenta_id'])
+            if not c:
+                cuenta = self.env['account.account'].browse(l['cuenta_id'])
+                if cuenta.include_initial_balance:
+                    saldo_ini = self.retornar_saldo_inicial_todos_anios(cuenta.id, datos['fecha_desde'])
+                else:
+                    saldo_ini = self.retornar_saldo_inicial_inicio_anio(cuenta.id, datos['fecha_desde'])
+                c = cuentas[l['cuenta_id']] = {
+                    'codigo': l['codigo'], 'cuenta': l['cuenta'],
+                    'saldo_inicial': saldo_ini, 'saldo': saldo_ini,
+                    'movimientos': [], 'total_debe': 0, 'total_haber': 0, 'saldo_final': saldo_ini,
+                }
+            c['saldo'] += l['debe'] - l['haber']
+            l['saldo'] = c['saldo']
+            c['movimientos'].append(l)
+            c['total_debe'] += l['debe']
+            c['total_haber'] += l['haber']
+            c['saldo_final'] = c['saldo']
+        lineas = sorted(cuentas.values(), key=lambda c: c['codigo'] or '')
+        for c in lineas:
+            totales['debe'] += c['total_debe']
+            totales['haber'] += c['total_haber']
+            totales['saldo_inicial'] += c['saldo_inicial']
+            totales['saldo_final'] += c['saldo_final']
+        return {'lineas': lineas, 'totales': totales}
+
     def lineas(self, datos):
+        if datos.get('modo') == 'detallado':
+            return self.lineas_detalladas(datos)
         totales = {}
         lineas_resumidas = {}
         lineas=[]
