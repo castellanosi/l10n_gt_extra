@@ -4,7 +4,7 @@ from odoo import api, models
 from odoo.exceptions import UserError
 import logging
 
-from .tipos_dte import TIPOS_DTE
+from .tipos_dte import campos_tipo_dte, codigo_dte
 
 class ReporteVentas(models.AbstractModel):
     _name = 'report.l10n_gt_extra.reporte_ventas'
@@ -35,7 +35,7 @@ class ReporteVentas(models.AbstractModel):
         tiene_gface = 'firma_gface' in campos_move
         tiene_fel_antiguo = 'firma_fel' in campos_move
         tiene_fel_nuevo = 'l10n_gt_fel_uuid' in campos_move and 'l10n_gt_fel_serie' in campos_move and 'l10n_gt_fel_numero' in campos_move
-        tiene_dte_code = 'l10n_gt_fel_dte_code' in campos_move
+        campos_dte = campos_tipo_dte(self.env['account.move'])
         tiene_fel_state = 'l10n_gt_fel_state' in campos_move
         tiene_resolucion = 'requiere_resolucion' in campos_diario
 
@@ -85,8 +85,9 @@ class ReporteVentas(models.AbstractModel):
             # 'tipo' se usa para la lógica (signo NC). 'tipo_mostrar' es lo que se imprime:
             # si la factura tiene tipo de DTE del integrador FEL (FACT, FPEQ, NCRE...), se muestra ese.
             tipo_mostrar = tipo
-            if tiene_dte_code and f.l10n_gt_fel_dte_code in TIPOS_DTE:
-                tipo_mostrar = f.l10n_gt_fel_dte_code
+            codigo = codigo_dte(f, campos_dte)
+            if codigo:
+                tipo_mostrar = codigo
 
             numero = f.name or '-'
 
