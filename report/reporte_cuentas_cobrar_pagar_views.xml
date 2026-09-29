@@ -4,38 +4,18 @@
     <!-- ===================== CUENTAS POR COBRAR ===================== -->
     <template id="reporte_cuentas_cobrar">
         <t t-call="web.html_container">
-            <t t-set="data_report_page_offset" t-value="data.get('folio_inicial', 1) + 1"/>
-            <t t-call="web.external_layout">
+            <t t-set="data_report_margin_top" t-value="40"/>
+            <t t-set="data_report_header_spacing" t-value="34"/>
+            <t t-call="l10n_gt_extra.encabezado_folio">
+                <t t-set="titulo" t-value="'Reporte de Cuentas por Cobrar'"/>
+            </t>
+            <t t-call="l10n_gt_extra.cuerpo_reporte">
                 <div class="page">
-                    <div style="text-align:right; font-size:10px; color:#666; margin-bottom:2px;">
-                        Folio: <span t-esc="data.get('folio_inicial', 1)"/>
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col-12">
-                            <h4 style="margin:0; border-bottom:2px solid #7c5cbf; padding-bottom:4px;">
-                                Reporte de Cuentas por Cobrar
-                            </h4>
-                        </div>
-                    </div>
-                    <div class="row mb-3" style="font-size:12px;">
-                        <div class="col-6">
-                            <strong>NIT:</strong> <span t-field="current_company_id.vat"/><br/>
-                            <strong>Empresa:</strong> <span t-field="current_company_id.partner_id.name"/>
-                        </div>
-                        <div class="col-6">
-                            <t t-if="data.get('fecha_inicio')">
-                                <strong>Documentos del:</strong>
-                                <span t-esc="data['fecha_inicio']" t-options="{'widget': 'date'}"/>
-                                <strong>al</strong>
-                                <span t-esc="data['fecha_corte']" t-options="{'widget': 'date'}"/><br/>
-                            </t>
-                            <strong>Saldo al corte del:</strong>
-                            <span t-esc="data['fecha_corte']" t-options="{'widget': 'date'}"/><br/>
-                            <t t-if="data.get('solo_con_saldo')">
-                                <small style="color:#888;">Solo clientes con saldo pendiente</small>
-                            </t>
-                        </div>
-                    </div>
+                    <div style="font-size: 12px; margin-bottom: 8px;">
+                        <strong>Saldo al corte del:</strong>
+                        <span t-esc="data['fecha_corte']" t-options="{'widget': 'date'}"/>
+                        <t t-if="data.get('fecha_inicio')"> — solo documentos del período</t>
+                        <t t-if="data.get('solo_con_saldo')"> — solo clientes con saldo pendiente</t></div>
 
                     <t t-set="result" t-value="lineas(data)"/>
 
@@ -44,8 +24,7 @@
                             <tr style="background:#ede9f7;">
                                 <th>Cliente</th>
                                 <th>NIT</th>
-                                <th class="text-right text-end">Corriente</th>
-                                <th class="text-right text-end">1-30 días</th>
+                                <th class="text-right text-end">0-30 días</th>
                                 <th class="text-right text-end">31-60 días</th>
                                 <th class="text-right text-end">61-90 días</th>
                                 <th class="text-right text-end">+90 días</th>
@@ -56,9 +35,6 @@
                             <tr t-foreach="result['lineas']" t-as="l">
                                 <td><span t-esc="l['nombre']"/></td>
                                 <td><span t-esc="l['nit']"/></td>
-                                <td class="text-right text-end">
-                                    <span t-if="l['corriente']" t-esc="l['corriente']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
-                                </td>
                                 <td class="text-right text-end">
                                     <span t-if="l['d30']" t-esc="l['d30']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
                                 </td>
@@ -80,9 +56,6 @@
                             <tr style="background:#e8e4f5; font-weight:bold;">
                                 <td>Totales (<span t-esc="result['totales']['num_clientes']"/> clientes)</td>
                                 <td></td>
-                                <td class="text-right text-end">
-                                    <span t-esc="result['totales']['corriente']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
-                                </td>
                                 <td class="text-right text-end">
                                     <span t-esc="result['totales']['d30']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
                                 </td>
@@ -109,38 +82,18 @@
     <!-- ===================== CUENTAS POR PAGAR ===================== -->
     <template id="reporte_cuentas_pagar">
         <t t-call="web.html_container">
-            <t t-set="data_report_page_offset" t-value="data.get('folio_inicial', 1) + 1"/>
-            <t t-call="web.external_layout">
+            <t t-set="data_report_margin_top" t-value="40"/>
+            <t t-set="data_report_header_spacing" t-value="34"/>
+            <t t-call="l10n_gt_extra.encabezado_folio">
+                <t t-set="titulo" t-value="'Reporte de Cuentas por Pagar'"/>
+            </t>
+            <t t-call="l10n_gt_extra.cuerpo_reporte">
                 <div class="page">
-                    <div style="text-align:right; font-size:10px; color:#666; margin-bottom:2px;">
-                        Folio: <span t-esc="data.get('folio_inicial', 1)"/>
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col-12">
-                            <h4 style="margin:0; border-bottom:2px solid #7c5cbf; padding-bottom:4px;">
-                                Reporte de Cuentas por Pagar
-                            </h4>
-                        </div>
-                    </div>
-                    <div class="row mb-3" style="font-size:12px;">
-                        <div class="col-6">
-                            <strong>NIT:</strong> <span t-field="current_company_id.vat"/><br/>
-                            <strong>Empresa:</strong> <span t-field="current_company_id.partner_id.name"/>
-                        </div>
-                        <div class="col-6">
-                            <t t-if="data.get('fecha_inicio')">
-                                <strong>Documentos del:</strong>
-                                <span t-esc="data['fecha_inicio']" t-options="{'widget': 'date'}"/>
-                                <strong>al</strong>
-                                <span t-esc="data['fecha_corte']" t-options="{'widget': 'date'}"/><br/>
-                            </t>
-                            <strong>Saldo al corte del:</strong>
-                            <span t-esc="data['fecha_corte']" t-options="{'widget': 'date'}"/><br/>
-                            <t t-if="data.get('solo_con_saldo')">
-                                <small style="color:#888;">Solo proveedores con saldo pendiente</small>
-                            </t>
-                        </div>
-                    </div>
+                    <div style="font-size: 12px; margin-bottom: 8px;">
+                        <strong>Saldo al corte del:</strong>
+                        <span t-esc="data['fecha_corte']" t-options="{'widget': 'date'}"/>
+                        <t t-if="data.get('fecha_inicio')"> — solo documentos del período</t>
+                        <t t-if="data.get('solo_con_saldo')"> — solo proveedores con saldo pendiente</t></div>
 
                     <t t-set="result" t-value="lineas(data)"/>
 
@@ -149,8 +102,7 @@
                             <tr style="background:#fef3cd;">
                                 <th>Proveedor</th>
                                 <th>NIT</th>
-                                <th class="text-right text-end">Corriente</th>
-                                <th class="text-right text-end">1-30 días</th>
+                                <th class="text-right text-end">0-30 días</th>
                                 <th class="text-right text-end">31-60 días</th>
                                 <th class="text-right text-end">61-90 días</th>
                                 <th class="text-right text-end">+90 días</th>
@@ -161,9 +113,6 @@
                             <tr t-foreach="result['lineas']" t-as="l">
                                 <td><span t-esc="l['nombre']"/></td>
                                 <td><span t-esc="l['nit']"/></td>
-                                <td class="text-right text-end">
-                                    <span t-if="l['corriente']" t-esc="l['corriente']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
-                                </td>
                                 <td class="text-right text-end">
                                     <span t-if="l['d30']" t-esc="l['d30']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
                                 </td>
@@ -185,9 +134,6 @@
                             <tr style="background:#fde68a; font-weight:bold;">
                                 <td>Totales (<span t-esc="result['totales']['num_proveedores']"/> proveedores)</td>
                                 <td></td>
-                                <td class="text-right text-end">
-                                    <span t-esc="result['totales']['corriente']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
-                                </td>
                                 <td class="text-right text-end">
                                     <span t-esc="result['totales']['d30']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
                                 </td>

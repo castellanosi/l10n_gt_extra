@@ -4,30 +4,13 @@
     <!-- ===================== ESTADO DE RESULTADOS ===================== -->
     <template id="reporte_estado_resultados">
         <t t-call="web.html_container">
-            <t t-set="data_report_page_offset" t-value="data.get('folio_inicial', 1) + 1"/>
-            <t t-call="web.external_layout">
+            <t t-set="data_report_margin_top" t-value="40"/>
+            <t t-set="data_report_header_spacing" t-value="34"/>
+            <t t-call="l10n_gt_extra.encabezado_folio">
+                <t t-set="titulo" t-value="'Estado de Resultados'"/>
+            </t>
+            <t t-call="l10n_gt_extra.cuerpo_reporte">
                 <div class="page">
-                    <div style="text-align:right; font-size:10px; color:#666; margin-bottom:2px;">
-                        Folio: <span t-esc="data.get('folio_inicial', 1)"/>
-                    </div>
-                    <div class="row mb-2 mt-2">
-                        <div class="col-12">
-                            <h4 style="margin:0; border-bottom:1px solid #ccc; padding-bottom:4px;">
-                                Estado de Resultados
-                            </h4>
-                        </div>
-                    </div>
-                    <div class="row mb-3" style="font-size:12px;">
-                        <div class="col-6">
-                            <strong>NIT:</strong> <span t-field="current_company_id.vat"/><br/>
-                            <strong>Empresa:</strong> <span t-field="current_company_id.partner_id.name"/>
-                        </div>
-                        <div class="col-6">
-                            <strong>Período del:</strong>
-                            <span t-esc="data['fecha_desde']" t-options="{'widget': 'date'}"/>
-                            al <span t-esc="data['fecha_hasta']" t-options="{'widget': 'date'}"/>
-                        </div>
-                    </div>
                     <t t-set="res" t-value="datos(data)"/>
                     <table class="table table-condensed mb-0" style="font-size:11px;">
                         <thead><tr style="background:#ede9f7;"><th colspan="2"><strong>Ingresos</strong></th></tr></thead>
@@ -83,29 +66,13 @@
     <!-- ===================== BALANCE GENERAL ===================== -->
     <template id="reporte_balance_general">
         <t t-call="web.html_container">
-            <t t-set="data_report_page_offset" t-value="data.get('folio_inicial', 1) + 1"/>
-            <t t-call="web.external_layout">
+            <t t-set="data_report_margin_top" t-value="40"/>
+            <t t-set="data_report_header_spacing" t-value="34"/>
+            <t t-call="l10n_gt_extra.encabezado_folio">
+                <t t-set="titulo" t-value="'Balance General'"/>
+            </t>
+            <t t-call="l10n_gt_extra.cuerpo_reporte">
                 <div class="page">
-                    <div style="text-align:right; font-size:10px; color:#666; margin-bottom:2px;">
-                        Folio: <span t-esc="data.get('folio_inicial', 1)"/>
-                    </div>
-                    <div class="row mb-2 mt-2">
-                        <div class="col-12">
-                            <h4 style="margin:0; border-bottom:1px solid #ccc; padding-bottom:4px;">
-                                Balance General
-                            </h4>
-                        </div>
-                    </div>
-                    <div class="row mb-3" style="font-size:12px;">
-                        <div class="col-6">
-                            <strong>NIT:</strong> <span t-field="current_company_id.vat"/><br/>
-                            <strong>Empresa:</strong> <span t-field="current_company_id.partner_id.name"/>
-                        </div>
-                        <div class="col-6">
-                            <strong>Al:</strong>
-                            <span t-esc="data['fecha_hasta']" t-options="{'widget': 'date'}"/>
-                        </div>
-                    </div>
                     <t t-set="res" t-value="datos(data)"/>
                     <div class="row">
                         <div class="col-6">
