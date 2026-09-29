@@ -96,14 +96,18 @@ class ReporteCuentasCobrar(models.AbstractModel):
                     'partner_id': d['comercial_id'],
                     'nombre': _to_str(d['nombre'], lang),
                     'nit': d['nit'] or 'CF',
-                    'saldo': 0.0, 'corriente': 0.0,
+                    'saldo': 0.0,
                     'd30': 0.0, 'd60': 0.0, 'd90': 0.0, 'd90mas': 0.0,
+                    '_fecha': d['date'],
                 }
+            elif d['date'] and g['_fecha'] and d['date'] > g['_fecha']:
+                # Con varios contactos del mismo NIT, se muestra el nombre del más reciente
+                g['nombre'] = _to_str(d['nombre'], lang)
+                g['_fecha'] = d['date']
             vence = _a_fecha(d['date_maturity'] or d['date'])
             dias = (corte - vence).days
-            if dias <= 0:
-                g['corriente'] += pendiente
-            elif dias <= 30:
+            if dias <= 30:
+                # 0-30 días: incluye lo que aún no ha vencido
                 g['d30'] += pendiente
             elif dias <= 60:
                 g['d60'] += pendiente
@@ -117,7 +121,7 @@ class ReporteCuentasCobrar(models.AbstractModel):
         if solo_con_saldo:
             lineas = [g for g in lineas if abs(g['saldo']) >= 0.01]
 
-        totales = {'saldo': 0, 'corriente': 0, 'd30': 0, 'd60': 0, 'd90': 0, 'd90mas': 0}
+        totales = {'saldo': 0, 'd30': 0, 'd60': 0, 'd90': 0, 'd90mas': 0}
         for g in lineas:
             for k in totales:
                 totales[k] += g[k]
@@ -126,7 +130,7 @@ class ReporteCuentasCobrar(models.AbstractModel):
     def lineas(self, datos):
         """
         Clientes con saldo pendiente al corte, agrupados por NIT, con
-        antigüedad por documento: corriente, 1-30, 31-60, 61-90, +90 días.
+        antigüedad por documento: 0-30, 31-60, 61-90, +90 días.
         """
         lineas, totales = self._consolidar(datos, 'asset_receivable', 1)
         totales['num_clientes'] = len(lineas)
@@ -154,7 +158,7 @@ class ReporteCuentasPagar(models.AbstractModel):
     def lineas(self, datos):
         """
         Proveedores con saldo pendiente al corte, agrupados por NIT, con
-        antigüedad por documento: corriente, 1-30, 31-60, 61-90, +90 días.
+        antigüedad por documento: 0-30, 31-60, 61-90, +90 días.
         """
         cobrar = self.env['report.l10n_gt_extra.reporte_cuentas_cobrar']
         lineas, totales = cobrar._consolidar(datos, 'liability_payable', -1)

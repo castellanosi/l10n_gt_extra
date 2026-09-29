@@ -3,6 +3,14 @@ import re
 from odoo import api, models
 
 from .reporte_cuentas_cobrar_pagar import NIT_NO_AGRUPABLES, nit_normalizado
+from .tipos_dte import TIPOS_DTE
+
+NOMBRE_TIPO = {
+    'out_invoice': 'Factura',
+    'out_refund': 'Nota de crédito',
+    'in_invoice': 'Factura de proveedor',
+    'in_refund': 'Nota de crédito de proveedor',
+}
 
 
 def _strip_html(val):
@@ -156,6 +164,14 @@ class ReporteEstadoCuenta(models.AbstractModel):
 
         rows    = self.env.cr.dictfetchall()
         sal_ant = self.saldo_anterior(datos)
+
+        # Datos FEL de los documentos (solo si los campos existen en esta base)
+        Move = self.env['account.move']
+        campos = Move._fields
+        fel_nuevo = all(c in campos for c in ('l10n_gt_fel_uuid', 'l10n_gt_fel_serie', 'l10n_gt_fel_numero'))
+        fel_antiguo = all(c in campos for c in ('firma_fel', 'serie_fel', 'numero_fel'))
+        con_dte_code = 'l10n_gt_fel_dte_code' in campos
+        movimientos = {m.id: m for m in Move.browse(list({r['move_id'] for r in rows}))}
         saldo   = sal_ant
 
         # Totales acumula columnas visibles (incluyendo retenciones sub-filas)
@@ -216,18 +232,29 @@ class ReporteEstadoCuenta(models.AbstractModel):
                 tot_debe  += r['debit']
                 tot_haber += r['credit']
 
+            correlativo = _jsonb_str(r['documento'])
             if es_factura:
-                # Facturas: referencia externa FEL o número de factura proveedor
+                # Documento: serie-número del DTE; si no hay, la referencia
+                # (número de factura del proveedor) o el correlativo de Odoo.
+                mov = movimientos.get(r['move_id'])
+                documento_ext = ''
+                if mov and fel_nuevo and mov.l10n_gt_fel_uuid:
+                    documento_ext = '%s-%s' % (mov.l10n_gt_fel_serie or '', mov.l10n_gt_fel_numero or '')
+                elif mov and fel_antiguo and mov.firma_fel:
+                    documento_ext = '%s-%s' % (mov.serie_fel or '', mov.numero_fel or '')
                 documento_ext = (
-                    _jsonb_str(r['move_ref']) or           # m.ref: UUID FEL o # factura proveedor
+                    documento_ext or
+                    _jsonb_str(r['move_ref']) or
                     _jsonb_str(r['payment_reference']) or
-                    _jsonb_str(r['documento'])             # fallback: correlativo Odoo
+                    correlativo
                 )
-                concepto = (
-                    _jsonb_str(r['linea_name']) or
-                    _jsonb_str(r['ref']) or
-                    ''
-                )
+                # Concepto: correlativo de Odoo + tipo de documento + descripción corta
+                tipo_doc = NOMBRE_TIPO.get(move_type, '')
+                if mov and con_dte_code and mov.l10n_gt_fel_dte_code in TIPOS_DTE:
+                    tipo_doc = TIPOS_DTE[mov.l10n_gt_fel_dte_code]
+                desc = _jsonb_str(r['linea_name']) or _jsonb_str(r['ref']) or ''
+                partes = [p for p in [correlativo, tipo_doc, desc if desc != correlativo else ''] if p]
+                concepto = ' · '.join(partes)
             else:
                 # Pagos / banco:
                 # Documento = m.ref (número de referencia bancaria: 25252525, DEP-001, etc.)
@@ -240,8 +267,8 @@ class ReporteEstadoCuenta(models.AbstractModel):
                 # Concepto = descripción banco + referencia de línea combinadas
                 bank_desc = _jsonb_str(r['bank_ref']) or _strip_html(r['move_narration']) or ''
                 line_desc = _jsonb_str(r['linea_name']) or _jsonb_str(r['ref']) or ''
-                partes = [p for p in [bank_desc, line_desc] if p]
-                concepto = ' — '.join(partes) if partes else ''
+                partes = [p for p in [correlativo, bank_desc, line_desc] if p]
+                concepto = ' · '.join(partes) if partes else ''
 
             lineas.append({
                 'fecha':       r['date'],

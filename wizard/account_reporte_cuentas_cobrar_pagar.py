@@ -75,34 +75,32 @@ class AsistenteReporteCuentasCobrar(models.TransientModel):
             hoja.write(1, 0, 'Al corte del: {}'.format(self.fecha_corte))
 
         y = 3
-        cols = ['Cliente', 'NIT', 'Corriente', '1-30 días', '31-60 días',
+        cols = ['Cliente', 'NIT', '0-30 días', '31-60 días',
                 '61-90 días', '+90 días', 'Saldo Total']
         for i, h in enumerate(cols):
             hoja.write(y, i, h, fmt_header)
         hoja.set_column(0, 0, 35)
         hoja.set_column(1, 1, 15)
-        hoja.set_column(2, 7, 14)
+        hoja.set_column(2, 6, 14)
 
         for linea in lineas:
             y += 1
             hoja.write(y, 0, linea['nombre'])
             hoja.write(y, 1, linea['nit'])
-            hoja.write(y, 2, linea['corriente'], fmt_num)
-            hoja.write(y, 3, linea['d30'], fmt_num)
-            hoja.write(y, 4, linea['d60'], fmt_num)
-            hoja.write(y, 5, linea['d90'], fmt_num)
-            hoja.write(y, 6, linea['d90mas'], fmt_num)
-            hoja.write(y, 7, linea['saldo'], fmt_num)
+            hoja.write(y, 2, linea['d30'], fmt_num)
+            hoja.write(y, 3, linea['d60'], fmt_num)
+            hoja.write(y, 4, linea['d90'], fmt_num)
+            hoja.write(y, 5, linea['d90mas'], fmt_num)
+            hoja.write(y, 6, linea['saldo'], fmt_num)
 
         y += 1
         hoja.write(y, 0, 'Totales ({} clientes)'.format(totales['num_clientes']), fmt_total)
         hoja.write(y, 1, '', fmt_total)
-        hoja.write(y, 2, totales['corriente'], fmt_total)
-        hoja.write(y, 3, totales['d30'], fmt_total)
-        hoja.write(y, 4, totales['d60'], fmt_total)
-        hoja.write(y, 5, totales['d90'], fmt_total)
-        hoja.write(y, 6, totales['d90mas'], fmt_total)
-        hoja.write(y, 7, totales['saldo'], fmt_total)
+        hoja.write(y, 2, totales['d30'], fmt_total)
+        hoja.write(y, 3, totales['d60'], fmt_total)
+        hoja.write(y, 4, totales['d90'], fmt_total)
+        hoja.write(y, 5, totales['d90mas'], fmt_total)
+        hoja.write(y, 6, totales['saldo'], fmt_total)
 
         libro.close()
         self.write({'archivo': base64.b64encode(f.getvalue()),
@@ -179,34 +177,32 @@ class AsistenteReporteCuentasPagar(models.TransientModel):
             hoja.write(1, 0, 'Al corte del: {}'.format(self.fecha_corte))
 
         y = 3
-        cols = ['Proveedor', 'NIT', 'Corriente', '1-30 días', '31-60 días',
+        cols = ['Proveedor', 'NIT', '0-30 días', '31-60 días',
                 '61-90 días', '+90 días', 'Saldo Total']
         for i, h in enumerate(cols):
             hoja.write(y, i, h, fmt_header)
         hoja.set_column(0, 0, 35)
         hoja.set_column(1, 1, 15)
-        hoja.set_column(2, 7, 14)
+        hoja.set_column(2, 6, 14)
 
         for linea in lineas:
             y += 1
             hoja.write(y, 0, linea['nombre'])
             hoja.write(y, 1, linea['nit'])
-            hoja.write(y, 2, linea['corriente'], fmt_num)
-            hoja.write(y, 3, linea['d30'], fmt_num)
-            hoja.write(y, 4, linea['d60'], fmt_num)
-            hoja.write(y, 5, linea['d90'], fmt_num)
-            hoja.write(y, 6, linea['d90mas'], fmt_num)
-            hoja.write(y, 7, linea['saldo'], fmt_num)
+            hoja.write(y, 2, linea['d30'], fmt_num)
+            hoja.write(y, 3, linea['d60'], fmt_num)
+            hoja.write(y, 4, linea['d90'], fmt_num)
+            hoja.write(y, 5, linea['d90mas'], fmt_num)
+            hoja.write(y, 6, linea['saldo'], fmt_num)
 
         y += 1
         hoja.write(y, 0, 'Totales ({} proveedores)'.format(totales['num_proveedores']), fmt_total)
         hoja.write(y, 1, '', fmt_total)
-        hoja.write(y, 2, totales['corriente'], fmt_total)
-        hoja.write(y, 3, totales['d30'], fmt_total)
-        hoja.write(y, 4, totales['d60'], fmt_total)
-        hoja.write(y, 5, totales['d90'], fmt_total)
-        hoja.write(y, 6, totales['d90mas'], fmt_total)
-        hoja.write(y, 7, totales['saldo'], fmt_total)
+        hoja.write(y, 2, totales['d30'], fmt_total)
+        hoja.write(y, 3, totales['d60'], fmt_total)
+        hoja.write(y, 4, totales['d90'], fmt_total)
+        hoja.write(y, 5, totales['d90mas'], fmt_total)
+        hoja.write(y, 6, totales['saldo'], fmt_total)
 
         libro.close()
         self.write({'archivo': base64.b64encode(f.getvalue()),
