@@ -13,7 +13,8 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.50` (sep. 2026).
+- **Versión:** `18.0.5.51` (sep. 2026). En producción en las 4 bases de
+  SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
 - **Depende de:** `l10n_gt`, `account`.
@@ -46,6 +47,15 @@ integrador FEL.** Por eso:
 
 Los reportes entienden los dos, sin depender de ninguno.
 
+**Importador de XML** (bases de SOLUCONTA): guarda `fel_tipo_documento`
+(FPEQ, FACT…), `fel_afiliacion_iva` (PEQ, GEN) y usa `firma_fel`,
+`serie_fel`, `numero_fel` como el integrador antiguo.
+
+El tipo de DTE se obtiene con `campos_tipo_dte()` + `codigo_dte()` de
+`report/tipos_dte.py`, que revisa en orden `l10n_gt_fel_dte_code` y
+`fel_tipo_documento`. Para un módulo nuevo que guarde el tipo en otro
+campo, agregarlo a `CAMPOS_TIPO_DTE`.
+
 `report/tipos_dte.py` tiene el catálogo de los 18 tipos de DTE del
 manual FEL de la SAT (FACT, FCAM, FPEQ, FCAP, FESP, NABN, RDON, RECI,
 NDEB, NCRE, FACA, FCCA, FAPE, FCPE, FAAE, FCAE, CIVA, CAIS). Un código
@@ -71,6 +81,23 @@ fuera de la lista se ignora y se usa la lógica anterior.
   PEQ salen en «VENT.» con IVA 0. Aprobado por el usuario; no cambiar.
 - Precálculo: campos opcionales, conjunto de ids de impuestos y tasa de
   cambio por compañía. Medido: 0.94 s → 0.05 s con 12 facturas.
+
+### Libro diario y libro mayor
+- Asistente con **Tipo de reporte** (`modo`): `resumido`, `por_dia`,
+  `detallado`. `agrupado_por_dia` se conserva como campo calculado desde
+  `modo` para las plantillas y el Excel anteriores.
+- **Detallado:** `report/detalle_comun.py` (`lineas_contables()`) lee cada
+  línea publicada de las cuentas elegidas. Diario: un bloque por asiento
+  (fecha, número, documento DTE o referencia, diario) con sus líneas y
+  total. Mayor: por cuenta, saldo inicial, cada movimiento con saldo
+  acumulado y saldo final. Excel incluido.
+- Verificado en `tienda_odoo`: con todas las cuentas, asientos, líneas,
+  debe y haber idénticos a Contabilidad → Asientos contables.
+
+### Retenciones ISR
+Lista las facturas con el impuesto de retención ISR elegido (el que
+agrega el botón «Retención ISR»). Se conserva: lo necesitan los agentes
+de retención del régimen general. Muestra serie-número y tipo de DTE.
 
 ### Cuentas por cobrar y por pagar
 - **Antigüedad por documento:** cada factura/NC/pago sin aplicar con su
@@ -152,6 +179,13 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
   (no `account_move_line.reconciled`); requiere OCA
   `account_reconciliation_widget` (18.0).
 - La migración `migrations/19.0.0.0/` no corre en 18.0 (versión menor).
+- **Servidor de producción SOLUCONTA** (4 bases, mismo código): actualizar
+  con `docker compose exec -T odoo /entrypoint.sh odoo -d <base> -u
+  l10n_gt_extra --no-http --stop-after-init`. El aviso «couldn't create
+  the logfile directory» es inofensivo; confirmar con
+  `SELECT latest_version FROM ir_module_module WHERE name='l10n_gt_extra'`.
+  `/web/login` responde 303 (varias bases): es normal. Las 4 bases se
+  actualizan en la misma sesión, porque comparten el código.
 - **Clon superficial:** el repo se clonó con `--depth` y solo seguía
   `18.0`. Para una rama nueva del remoto:
   `git remote set-branches --add origin <rama> && git fetch origin <rama>`.
@@ -203,6 +237,7 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 
 | Versión | Cambio principal |
 |---|---|
+| 5.51 | Tipo de DTE también desde `fel_tipo_documento` (importador de XML); diario y mayor detallados; ISR con serie-número (PR #6 y siguiente) |
 | 5.50 | Tipos DTE SAT, serie-número FEL, anuladas en cero, rendimiento; CxC/CxP por documento, fecha inicial, agrupación por NIT; estado de cuenta consolidado con documentos DTE; encabezado único con folio por página y estilo común (PR #3 y #4) |
 | 5.49 | Balanza: cuentas con saldo arrastrado sin movimiento |
 | 5.46–5.48 | Conciliación bancaria; quitar dependencia `gt_tax_regime` |

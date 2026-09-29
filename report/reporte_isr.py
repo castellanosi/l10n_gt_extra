@@ -3,7 +3,7 @@
 from odoo import api, models
 from odoo.exceptions import UserError
 
-from .tipos_dte import TIPOS_DTE
+from .tipos_dte import campos_tipo_dte, codigo_dte
 
 
 class ReporteISR(models.AbstractModel):
@@ -37,7 +37,7 @@ class ReporteISR(models.AbstractModel):
         campos = self.env['account.move']._fields
         fel_nuevo = all(c in campos for c in ('l10n_gt_fel_uuid', 'l10n_gt_fel_serie', 'l10n_gt_fel_numero'))
         fel_antiguo = 'firma_fel' in campos
-        con_dte_code = 'l10n_gt_fel_dte_code' in campos
+        campos_dte = campos_tipo_dte(self.env['account.move'])
 
         lineas = []
         for f in facturas:
@@ -71,8 +71,7 @@ class ReporteISR(models.AbstractModel):
             if fel_nuevo and f.l10n_gt_fel_uuid:
                 numero = '%s-%s' % (f.l10n_gt_fel_serie or '', f.l10n_gt_fel_numero or '')
             tipo = 'NC' if 'refund' in (f.move_type or '') else 'FACT'
-            if con_dte_code and f.l10n_gt_fel_dte_code in TIPOS_DTE:
-                tipo = f.l10n_gt_fel_dte_code
+            tipo = codigo_dte(f, campos_dte) or tipo
 
             lineas.append({
                 'fecha': f.invoice_date or f.date,

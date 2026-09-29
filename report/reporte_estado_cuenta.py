@@ -3,7 +3,7 @@ import re
 from odoo import api, models
 
 from .reporte_cuentas_cobrar_pagar import NIT_NO_AGRUPABLES, nit_normalizado
-from .tipos_dte import TIPOS_DTE
+from .tipos_dte import TIPOS_DTE, campos_tipo_dte, codigo_dte
 
 NOMBRE_TIPO = {
     'out_invoice': 'Factura',
@@ -170,7 +170,7 @@ class ReporteEstadoCuenta(models.AbstractModel):
         campos = Move._fields
         fel_nuevo = all(c in campos for c in ('l10n_gt_fel_uuid', 'l10n_gt_fel_serie', 'l10n_gt_fel_numero'))
         fel_antiguo = all(c in campos for c in ('firma_fel', 'serie_fel', 'numero_fel'))
-        con_dte_code = 'l10n_gt_fel_dte_code' in campos
+        campos_dte = campos_tipo_dte(Move)
         movimientos = {m.id: m for m in Move.browse(list({r['move_id'] for r in rows}))}
         saldo   = sal_ant
 
@@ -250,8 +250,9 @@ class ReporteEstadoCuenta(models.AbstractModel):
                 )
                 # Concepto: correlativo de Odoo + tipo de documento + descripción corta
                 tipo_doc = NOMBRE_TIPO.get(move_type, '')
-                if mov and con_dte_code and mov.l10n_gt_fel_dte_code in TIPOS_DTE:
-                    tipo_doc = TIPOS_DTE[mov.l10n_gt_fel_dte_code]
+                codigo = codigo_dte(mov, campos_dte) if mov else None
+                if codigo:
+                    tipo_doc = TIPOS_DTE[codigo]
                 desc = _jsonb_str(r['linea_name']) or _jsonb_str(r['ref']) or ''
                 partes = [p for p in [correlativo, tipo_doc, desc if desc != correlativo else ''] if p]
                 concepto = ' · '.join(partes)
