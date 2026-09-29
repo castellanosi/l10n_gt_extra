@@ -11,6 +11,7 @@
                 <group>
                     <group>
                         <field name="folio_inicial"/>
+                        <field name="fecha_inicio"/>
                         <field name="fecha_corte"/>
                         <field name="solo_con_saldo"/>
                     </group>
@@ -59,6 +60,7 @@
                 <group>
                     <group>
                         <field name="folio_inicial"/>
+                        <field name="fecha_inicio"/>
                         <field name="fecha_corte"/>
                         <field name="solo_con_saldo"/>
                     </group>
