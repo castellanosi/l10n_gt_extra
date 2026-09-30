@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 {
     'name': 'Guatemala - reportes y funcionalidad extra',
-    'version': '18.0.5.52',
+    'version': '18.0.5.53',
     'category': 'Accounting/Localizations/Reporting',
     'description': """
         Reportes requeridos por la SAT y otra funcionalidad extra para llevar

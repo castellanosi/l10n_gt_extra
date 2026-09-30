@@ -13,7 +13,7 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.52` (sep. 2026). En producción en las 4 bases de
+- **Versión:** `18.0.5.53` (sep. 2026). En producción en las 4 bases de
   SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
@@ -154,6 +154,11 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 - Sin logo ni URL al pie (decisión del usuario: encabezado funcional).
   El cuerpo ya no repite empresa/NIT/período; solo datos propios del
   reporte (establecimiento del diario, cuenta bancaria, cliente…).
+- Columnas que **no se parten** (clase `l10n_gt_nowrap` y montos
+  `text-right`/`text-end`): tipo, fecha, documento, NIT y montos. Los
+  nombres largos son los que bajan de línea. Mismo papel y DPI en los dos
+  servidores (Carta, 90 DPI, `wkhtmltopdf` 0.12.6.1): las diferencias de
+  aspecto vienen de los datos (nombres largos), no del entorno.
 - Orientación: horizontal ventas, compras, balanza, CxC, CxP, ISR;
   vertical el resto. Aprobado.
 - **Folio:** el `subst()` propio (en `report_views.xml`) pone en cada
@@ -242,6 +247,7 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 
 | Versión | Cambio principal |
 |---|---|
+| 5.53 | Montos, fecha, tipo, documento y NIT sin cortes de línea en el PDF (`l10n_gt_nowrap`) |
 | 5.52 | Revertido: no leer `fel_tipo_documento` (calculado por régimen de la empresa) |
 | 5.51 | Tipo de DTE también desde `fel_tipo_documento` (importador de XML); diario y mayor detallados; ISR con serie-número (PR #6 y siguiente) |
 | 5.50 | Tipos DTE SAT, serie-número FEL, anuladas en cero, rendimiento; CxC/CxP por documento, fecha inicial, agrupación por NIT; estado de cuenta consolidado con documentos DTE; encabezado único con folio por página y estilo común (PR #3 y #4) |

@@ -62,6 +62,9 @@
                 .l10n_gt_cuerpo table td { border-bottom: 1px solid #999; padding: 3px 5px; }
                 .l10n_gt_cuerpo table tfoot td { border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; }
                 .l10n_gt_cuerpo tr { page-break-inside: avoid; }
+                /* Montos, fechas, tipo, documento y NIT nunca se parten en dos líneas;
+                   los nombres largos son los que bajan de línea. */
+                .l10n_gt_cuerpo td.text-right, .l10n_gt_cuerpo td.text-end, .l10n_gt_cuerpo .l10n_gt_nowrap { white-space: nowrap; }
                 .l10n_gt_cuerpo thead { display: table-header-group; }
             </style>
             <t t-out="0"/>
