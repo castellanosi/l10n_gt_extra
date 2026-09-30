@@ -40,19 +40,19 @@
                         </thead>
                         <tbody>
                             <tr t-foreach="result['lineas']" t-as="l">
-                                <td>
+                                <td class="l10n_gt_nowrap">
                                     <span t-esc="l['tipo']"/>
                                 </td>
-                                <td>
+                                <td class="l10n_gt_nowrap">
                                     <span t-esc="l['fecha']" t-options='{"widget": "date"}'/>
                                 </td>
-                                <td>
+                                <td class="l10n_gt_nowrap">
                                     <span t-esc="l['numero']"/>
                                 </td>
                                 <td>
                                     <span t-esc="l['proveedor'].name"/>
                                 </td>
-                                <td>
+                                <td class="l10n_gt_nowrap">
                                     <span t-esc="l['proveedor'].vat or l['proveedor'].cui"/>
                                 </td>
                                 <td class="text-right">
