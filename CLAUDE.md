@@ -13,7 +13,7 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.53` (sep. 2026). En producción en las 4 bases de
+- **Versión:** `18.0.5.54` (sep. 2026). En producción en las 4 bases de
   SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
@@ -205,6 +205,46 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 
 ---
 
+- **Nunca decidir el signo comparando el texto `tipo`.** En el libro de
+  compras a `tipo` se le concatena `' PEQ'`, así que `tipo == 'NC'`
+  fallaba y las notas de crédito de proveedores pequeño contribuyente
+  **sumaban**. Desde v5.54 el signo lo manda la bandera `es_nc`
+  (`move_type != 'in_invoice' and not nota_debito`); `tipo` es solo texto
+  a imprimir.
+- `gt_dte_tipo` y `gt_emisor_afiliacion_iva` los crea `gt_xml_importer`
+  (>= 18.0.1.2.0) y son **almacenados, no calculados**: traen el dato del
+  propio DTE. `gt_emisor_afiliacion_iva` es el régimen de QUIEN EMITIÓ el
+  documento, no el de la empresa que lleva la contabilidad. Leerlos
+  siempre tras comprobar `'campo' in Model._fields`.
+- **`l10n_gt_fel_dte_code` solo vale con `l10n_gt_fel_uuid`.**
+  `odoo_fel_integrador` calcula ese campo también en facturas de
+  proveedor, según el régimen de la EMPRESA (empresa PEQ → FPEQ,
+  rectificativa → NABN), aunque nunca las certificó. En v5.54 inicial el
+  libro de compras de Susely salió todo FPEQ/NABN. `CAMPOS_TIPO_DTE`
+  lleva pares (campo, requisito).
+- **Crédito fiscal en compras** (reglas del contador, 01/10/2026):
+  comprador PEQ o EXE → nunca crédito, todo a exento; comprador GEN que
+  recibe FPEQ/FCAP/FAPE/FCPE/RDON/RECI, o de un emisor PEQ/EXE → sin
+  crédito; comprador GEN con FACT/NCRE/FCAM… → decide el impuesto de cada
+  línea, como siempre. Sin crédito, el monto con impuestos
+  (`total_included`) va a la columna exenta y el IVA queda en cero. Los
+  documentos de pequeño contribuyente van a la columna **Peq.**
+- **El régimen del comprador NO se guarda en este módulo.** La única
+  fuente es `res.company.gt_tax_regime` de `l10n_gt_peq` (claves GEN /
+  PEQ / EXE) y su historial `company.regime.history` (`regime`,
+  `date_from`, `date_to`). El asistente del libro de compras propone el
+  régimen vigente en la **fecha inicial** (`regimen_en_fecha()`) y se
+  puede cambiar a mano. Sin `l10n_gt_peq` instalado: GEN, comportamiento
+  anterior. Se lee con `'campo' in _fields`, **sin** agregar
+  `l10n_gt_peq` a `depends` (regla 0). En el borrador de 5.54 se creó un
+  campo propio `l10n_gt_regimen_iva` duplicando el régimen y se quitó
+  antes de subir: si aparece la columna huérfana en `tienda_odoo`, es eso.
+- Los documentos **ya importados antes del PR #4 del importador** no
+  tienen `gt_dte_tipo`: para ellos el libro sigue mostrando la lógica
+  anterior. Rellenar lo histórico es una decisión aparte.
+
+---
+
 ## 4. Cómo trabajar (resumen; el detalle está en PROTOCOLO-ENTREGAS.md)
 
 | Variable | Valor en el servidor de pruebas |
@@ -214,9 +254,13 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 | `<DOMINIO>` | `iaguatemala.click` |
 | `<MODULOS>` | `l10n_gt_extra` |
 
-- El repo no tiene `.pre-commit-config.yaml` ni `tests/`: se valida con
-  `py_compile` y el parser XML, y se actualiza con `-u` (sin
-  `--test-enable`). No introducir pre-commit en un cambio funcional.
+- El repo no tiene `.pre-commit-config.yaml`: se valida con `py_compile`
+  y el parser XML. No introducir pre-commit en un cambio funcional.
+- Desde v5.54 hay `tests/` (solo funciones puras de `report/tipos_dte.py`,
+  con objetos simulados; no tocan la base). Se corren con
+  `--test-enable --test-tags /l10n_gt_extra`. **No** usar
+  `AccountTestInvoicingCommon`: en `tienda_odoo` falla al crear el usuario
+  de prueba (algún módulo OCA rompe `res.users.create` en tests).
 - **Nunca `docker compose restart`** (se cuelga): siempre
   `stop && rm -f && up -d`, en bloque aparte y solo si `-u` salió limpio.
 - Actualizar desde la interfaz **no** recarga el Python.
@@ -247,6 +291,7 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 
 | Versión | Cambio principal |
 |---|---|
+| 5.54 | Tipo real de DTE desde `gt_dte_tipo` (importador); `l10n_gt_fel_dte_code` solo si el documento tiene UUID; columna Peq. por tipo y afiliación del emisor; crédito fiscal según régimen del comprador (de `l10n_gt_peq`, con historial, elegible en el asistente) y tipo de documento; corregido el signo de las NC de proveedor PEQ; primeras pruebas automáticas |
 | 5.53 | Montos, fecha, tipo, documento y NIT sin cortes de línea en el PDF (`l10n_gt_nowrap`) |
 | 5.52 | Revertido: no leer `fel_tipo_documento` (calculado por régimen de la empresa) |
 | 5.51 | Tipo de DTE también desde `fel_tipo_documento` (importador de XML); diario y mayor detallados; ISR con serie-número (PR #6 y siguiente) |
