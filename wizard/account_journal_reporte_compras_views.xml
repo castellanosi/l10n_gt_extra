@@ -9,6 +9,7 @@
             <form string="Seleccione diarios y rango de fecha">
                 <group>
                     <group>
+                        <field name="regimen_comprador"/>
                         <field name="folio_inicial"/>
                         <field name="fecha_desde"/>
                         <field name="fecha_hasta"/>

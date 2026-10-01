@@ -4,7 +4,14 @@ from odoo import api, models
 from odoo.exceptions import UserError
 import logging
 
-from .tipos_dte import campos_tipo_dte, codigo_dte
+from .tipos_dte import (
+    afiliacion_emisor,
+    campo_afiliacion,
+    campos_tipo_dte,
+    codigo_dte,
+    es_pequenio,
+    sin_credito_fiscal,
+)
 
 class ReporteCompras(models.AbstractModel):
     _name = 'report.l10n_gt_extra.reporte_compras'
@@ -35,6 +42,11 @@ class ReporteCompras(models.AbstractModel):
         tiene_fel_antiguo = 'firma_fel' in campos_move
         tiene_fel_nuevo = 'l10n_gt_fel_uuid' in campos_move and 'l10n_gt_fel_serie' in campos_move and 'l10n_gt_fel_numero' in campos_move
         campos_dte = campos_tipo_dte(self.env['account.move'])
+        campo_afil = campo_afiliacion(self.env['account.move'])
+        # Régimen de la empresa QUE COMPRA en el periodo del libro. Viene del
+        # asistente (por defecto el de la compañía) para poder reimprimir un
+        # periodo anterior a un cambio de régimen. Sin dato: GEN (como antes).
+        regimen_comprador = datos.get('regimen_comprador') or 'GEN'
         tiene_fel_state = 'l10n_gt_fel_state' in campos_move
 
         if tiene_type:
@@ -73,18 +85,30 @@ class ReporteCompras(models.AbstractModel):
                     tasas_por_compania[f.company_id.id] = self.env['res.currency']._get_conversion_rate(f.company_id.currency_id, self.env.company.currency_id)
                 tipo_cambio = tasas_por_compania[f.company_id.id]
 
-            tipo = 'FACT'
             tipo_interno_factura = f.type if tiene_type else f.move_type
+
+            # es_nc manda el SIGNO de la rectificativa. Antes se comparaba el
+            # texto 'tipo', al que más abajo se le pegaba ' PEQ': una nota de
+            # crédito de un proveedor pequeño contribuyente quedaba 'NC PEQ' y
+            # nunca cambiaba de signo, por lo que SUMABA en el libro.
+            # Las notas de débito no cambian de signo (comportamiento anterior).
+            es_nc = tipo_interno_factura != 'in_invoice' and not f.nota_debito
+            codigo = codigo_dte(f, campos_dte)
+            peq = es_pequenio(f, campo_afil, codigo)
+            sin_credito = sin_credito_fiscal(
+                regimen_comprador, codigo, afiliacion_emisor(f, campo_afil)
+            )
+
+            tipo = 'FACT'
             if tipo_interno_factura != 'in_invoice':
                 tipo = 'NC'
             if f.nota_debito:
                 tipo = 'ND'
-            if f.partner_id.pequenio_contribuyente:
+            if peq:
                 tipo += ' PEQ'
 
             # 'tipo' se usa para la lógica (sin cambios). 'tipo_mostrar' es lo que se imprime.
             tipo_mostrar = tipo
-            codigo = codigo_dte(f, campos_dte)
             if codigo:
                 tipo_mostrar = codigo
            
@@ -129,7 +153,7 @@ class ReporteCompras(models.AbstractModel):
 
             for l in f.invoice_line_ids:
                 precio = ( l.price_unit * (1-(l.discount or 0.0)/100.0) ) * tipo_cambio
-                if tipo == 'NC':
+                if es_nc:
                     precio = precio * -1
 
                 tipo_linea = f.tipo_gasto or 'mixto'
@@ -139,13 +163,22 @@ class ReporteCompras(models.AbstractModel):
                     else:
                         tipo_linea = 'servicio'
 
-                if f.partner_id.pequenio_contribuyente:
+                if peq:
                     tipo_linea = 'pequeño'
 
                 # Siempre enviar cantidad y precio correctos. Por qué algunos impuestos se calculan por cantidades.
                 r = l.tax_ids.compute_all(precio, currency=f.currency_id, quantity=l.quantity, product=l.product_id, partner=f.partner_id)
 
                 linea['base'] += r['total_excluded']
+
+                # Sin crédito fiscal: el monto completo pagado (con cualquier
+                # impuesto que traiga la línea) va a la columna exenta, sin IVA.
+                if sin_credito:
+                    linea[tipo_linea+'_exento'] += r['total_included']
+                    totales[tipo_linea]['exento'] += r['total_included']
+                    totales[tipo_linea]['total'] += r['total_included']
+                    continue
+
                 totales[tipo_linea]['total'] += r['total_excluded']
 
                 # No es exenta si trae el impuesto seleccionado en el wizard
@@ -157,7 +190,7 @@ class ReporteCompras(models.AbstractModel):
                             linea['iva'] += i['amount']
                             totales[tipo_linea]['iva'] += i['amount']
                             totales[tipo_linea]['total'] += i['amount']
-                        elif (i['amount'] > 0 and tipo != 'NC') or (i['amount'] < 0 and tipo == 'NC'):
+                        elif (i['amount'] > 0 and not es_nc) or (i['amount'] < 0 and es_nc):
                             linea[tipo_linea+'_exento'] += i['amount']
                             totales[tipo_linea]['exento'] += i['amount']
                             totales[tipo_linea]['total'] += i['amount']
