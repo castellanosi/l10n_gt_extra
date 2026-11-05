@@ -15,7 +15,7 @@
                         <strong>Saldo al corte del:</strong>
                         <span t-esc="data['fecha_corte']" t-options="{'widget': 'date'}"/>
                         <t t-if="data.get('fecha_inicio')"> — solo documentos del período</t>
-                        <t t-if="data.get('solo_con_saldo')"> — solo clientes con saldo pendiente</t></div>
+                        <t t-if="data.get('solo_con_saldo')"> — solo clientes con saldo pendiente</t><t t-else=""> — todos los clientes, incluso con saldo cero</t></div>
 
                     <t t-set="result" t-value="lineas(data)"/>
 
@@ -93,7 +93,7 @@
                         <strong>Saldo al corte del:</strong>
                         <span t-esc="data['fecha_corte']" t-options="{'widget': 'date'}"/>
                         <t t-if="data.get('fecha_inicio')"> — solo documentos del período</t>
-                        <t t-if="data.get('solo_con_saldo')"> — solo proveedores con saldo pendiente</t></div>
+                        <t t-if="data.get('solo_con_saldo')"> — solo proveedores con saldo pendiente</t><t t-else=""> — todos los proveedores, incluso con saldo cero</t></div>
 
                     <t t-set="result" t-value="lineas(data)"/>
 

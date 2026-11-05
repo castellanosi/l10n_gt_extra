@@ -13,7 +13,7 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.54` (sep. 2026). En producción en las 4 bases de
+- **Versión:** `18.0.5.55` (nov. 2026). En producción en las 4 bases de
   SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
@@ -119,6 +119,11 @@ de retención del régimen general. Muestra serie-número y tipo de DTE.
   sin guiones ni espacios). NIT vacío o `CF` **nunca** se agrupan. Se
   agrupa por `commercial_partner_id`. El nombre mostrado es el del
   contacto con el documento más reciente.
+- **Cheque «Solo con saldo pendiente»** (`agrupar_documentos()`, función
+  pura con pruebas): marcado, solo documentos y contactos con saldo;
+  sin marcar, todos los contactos con documentos dentro de las fechas,
+  incluso pagados (saldo 0.00). Hasta 5.54 el cheque no hacía nada: los
+  documentos en cero se descartaban antes de agrupar.
 
 ### Estado de cuenta
 - Incluye **todos los contactos con el mismo NIT** y los contactos hijos
@@ -256,7 +261,8 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 
 - El repo no tiene `.pre-commit-config.yaml`: se valida con `py_compile`
   y el parser XML. No introducir pre-commit en un cambio funcional.
-- Desde v5.54 hay `tests/` (solo funciones puras de `report/tipos_dte.py`,
+- Desde v5.54 hay `tests/` (funciones puras de `report/tipos_dte.py` y,
+  desde 5.55, `agrupar_documentos()` de CxC/CxP,
   con objetos simulados; no tocan la base). Se corren con
   `--test-enable --test-tags /l10n_gt_extra`. **No** usar
   `AccountTestInvoicingCommon`: en `tienda_odoo` falla al crear el usuario
@@ -291,6 +297,7 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 
 | Versión | Cambio principal |
 |---|---|
+| 5.55 | CxC/CxP: el cheque «Solo con saldo pendiente» funciona; sin él salen también los contactos pagados (saldo 0.00) |
 | 5.54 | Tipo real de DTE desde `gt_dte_tipo` (importador); `l10n_gt_fel_dte_code` solo si el documento tiene UUID; columna Peq. por tipo y afiliación del emisor; crédito fiscal según régimen del comprador (de `l10n_gt_peq`, con historial, elegible en el asistente) y tipo de documento; corregido el signo de las NC de proveedor PEQ; primeras pruebas automáticas |
 | 5.53 | Montos, fecha, tipo, documento y NIT sin cortes de línea en el PDF (`l10n_gt_nowrap`) |
 | 5.52 | Revertido: no leer `fel_tipo_documento` (calculado por régimen de la empresa) |
