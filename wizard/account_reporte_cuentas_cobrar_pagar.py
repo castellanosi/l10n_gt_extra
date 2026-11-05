@@ -15,7 +15,7 @@ class AsistenteReporteCuentasCobrar(models.TransientModel):
     fecha_inicio = fields.Date(
         string='Fecha inicial',
         help='Opcional. Solo incluye documentos con fecha desde este día. '
-             'Vacío: todos los documentos pendientes hasta la fecha final.',
+             'Vacío: todos los documentos hasta la fecha final.',
     )
     fecha_corte = fields.Date(
         string='Fecha final (corte)', required=True,
@@ -23,7 +23,9 @@ class AsistenteReporteCuentasCobrar(models.TransientModel):
     )
     solo_con_saldo = fields.Boolean(
         string='Solo con saldo pendiente', default=True,
-        help='Muestra únicamente clientes que tienen saldo pendiente al corte',
+        help='Marcado: solo clientes con saldo pendiente al corte.\n'
+             'Sin marcar: todos los clientes con documentos en el rango de '
+             'fechas, incluso los ya pagados (saldo 0.00).',
     )
     name = fields.Char('Nombre archivo')
     archivo = fields.Binary('Archivo')
@@ -117,7 +119,7 @@ class AsistenteReporteCuentasPagar(models.TransientModel):
     fecha_inicio = fields.Date(
         string='Fecha inicial',
         help='Opcional. Solo incluye documentos con fecha desde este día. '
-             'Vacío: todos los documentos pendientes hasta la fecha final.',
+             'Vacío: todos los documentos hasta la fecha final.',
     )
     fecha_corte = fields.Date(
         string='Fecha final (corte)', required=True,
@@ -125,7 +127,9 @@ class AsistenteReporteCuentasPagar(models.TransientModel):
     )
     solo_con_saldo = fields.Boolean(
         string='Solo con saldo pendiente', default=True,
-        help='Muestra únicamente proveedores que tienen saldo pendiente al corte',
+        help='Marcado: solo proveedores con saldo pendiente al corte.\n'
+             'Sin marcar: todos los proveedores con documentos en el rango de '
+             'fechas, incluso los ya pagados (saldo 0.00).',
     )
     name = fields.Char('Nombre archivo')
     archivo = fields.Binary('Archivo')

@@ -29,13 +29,76 @@ def _a_fecha(valor):
     return valor
 
 
+def agrupar_documentos(documentos, corte, signo, solo_con_saldo=True, lang='en_US'):
+    """
+    Agrupa los documentos por NIT (o por contacto si no hay NIT o es CF) y
+    reparte el saldo de CADA documento en su tramo de antigüedad según su
+    fecha de vencimiento.
+
+    - solo_con_saldo=True: solo documentos con saldo al corte, y solo
+      clientes/proveedores cuyo saldo total no es cero.
+    - solo_con_saldo=False: TODOS los clientes/proveedores con documentos
+      dentro de las fechas, aunque estén pagados (saldo 0.00).
+
+    Función pura (sin base de datos) para poder probarla.
+    """
+    grupos = {}
+    for d in documentos:
+        pendiente = float(d['pendiente'] or 0) * signo
+        if abs(pendiente) < 0.005:
+            if solo_con_saldo:
+                continue
+            pendiente = 0.0
+        nit = nit_normalizado(d['nit'])
+        llave = ('nit', nit) if nit not in NIT_NO_AGRUPABLES else ('contacto', d['comercial_id'])
+        g = grupos.get(llave)
+        if not g:
+            g = grupos[llave] = {
+                'partner_id': d['comercial_id'],
+                'nombre': _to_str(d['nombre'], lang),
+                'nit': d['nit'] or 'CF',
+                'saldo': 0.0,
+                'd30': 0.0, 'd60': 0.0, 'd90': 0.0, 'd90mas': 0.0,
+                '_fecha': d['date'],
+            }
+        elif d['date'] and g['_fecha'] and d['date'] > g['_fecha']:
+            # Con varios contactos del mismo NIT, se muestra el nombre del más reciente
+            g['nombre'] = _to_str(d['nombre'], lang)
+            g['_fecha'] = d['date']
+        if not pendiente:
+            continue
+        vence = _a_fecha(d['date_maturity'] or d['date'])
+        dias = (corte - vence).days
+        if dias <= 30:
+            # 0-30 días: incluye lo que aún no ha vencido
+            g['d30'] += pendiente
+        elif dias <= 60:
+            g['d60'] += pendiente
+        elif dias <= 90:
+            g['d90'] += pendiente
+        else:
+            g['d90mas'] += pendiente
+        g['saldo'] += pendiente
+
+    lineas = sorted(grupos.values(), key=lambda g: (g['nombre'] or '').lower())
+    if solo_con_saldo:
+        lineas = [g for g in lineas if abs(g['saldo']) >= 0.01]
+
+    totales = {'saldo': 0, 'd30': 0, 'd60': 0, 'd90': 0, 'd90mas': 0}
+    for g in lineas:
+        for k in totales:
+            totales[k] += g[k]
+    return lineas, totales
+
+
 class ReporteCuentasCobrar(models.AbstractModel):
     _name = 'report.l10n_gt_extra.reporte_cuentas_cobrar'
     _description = 'Reporte Consolidado Cuentas por Cobrar'
 
     def _documentos_abiertos(self, datos, account_type):
         """
-        Documentos (líneas de CxC o CxP) con saldo pendiente AL CORTE.
+        Documentos (líneas de CxC o CxP) hasta el corte, con su saldo
+        pendiente AL CORTE (puede ser 0 si ya están pagados).
 
         El saldo de cada documento se calcula a la fecha de corte:
         importe original menos lo conciliado (pagos, notas de crédito)
@@ -73,63 +136,21 @@ class ReporteCuentasCobrar(models.AbstractModel):
 
     def _consolidar(self, datos, account_type, signo):
         """
-        Agrupa los documentos pendientes por NIT (o por contacto si no hay NIT
-        o es CF) y reparte el saldo de CADA documento en su tramo de antigüedad
-        según su fecha de vencimiento.
+        Lee los documentos de CxC (o CxP) hasta el corte y los agrupa con
+        agrupar_documentos(). Ver su docstring para el uso de solo_con_saldo.
 
         signo = 1 para CxC (saldo deudor), -1 para CxP (saldo acreedor).
         """
-        solo_con_saldo = datos.get('solo_con_saldo', True)
-        lang = datos.get('lang', 'en_US')
         documentos, corte = self._documentos_abiertos(datos, account_type)
-
-        grupos = {}
-        for d in documentos:
-            pendiente = float(d['pendiente'] or 0) * signo
-            if abs(pendiente) < 0.005:
-                continue
-            nit = nit_normalizado(d['nit'])
-            llave = ('nit', nit) if nit not in NIT_NO_AGRUPABLES else ('contacto', d['comercial_id'])
-            g = grupos.get(llave)
-            if not g:
-                g = grupos[llave] = {
-                    'partner_id': d['comercial_id'],
-                    'nombre': _to_str(d['nombre'], lang),
-                    'nit': d['nit'] or 'CF',
-                    'saldo': 0.0,
-                    'd30': 0.0, 'd60': 0.0, 'd90': 0.0, 'd90mas': 0.0,
-                    '_fecha': d['date'],
-                }
-            elif d['date'] and g['_fecha'] and d['date'] > g['_fecha']:
-                # Con varios contactos del mismo NIT, se muestra el nombre del más reciente
-                g['nombre'] = _to_str(d['nombre'], lang)
-                g['_fecha'] = d['date']
-            vence = _a_fecha(d['date_maturity'] or d['date'])
-            dias = (corte - vence).days
-            if dias <= 30:
-                # 0-30 días: incluye lo que aún no ha vencido
-                g['d30'] += pendiente
-            elif dias <= 60:
-                g['d60'] += pendiente
-            elif dias <= 90:
-                g['d90'] += pendiente
-            else:
-                g['d90mas'] += pendiente
-            g['saldo'] += pendiente
-
-        lineas = sorted(grupos.values(), key=lambda g: (g['nombre'] or '').lower())
-        if solo_con_saldo:
-            lineas = [g for g in lineas if abs(g['saldo']) >= 0.01]
-
-        totales = {'saldo': 0, 'd30': 0, 'd60': 0, 'd90': 0, 'd90mas': 0}
-        for g in lineas:
-            for k in totales:
-                totales[k] += g[k]
-        return lineas, totales
+        return agrupar_documentos(
+            documentos, corte, signo,
+            solo_con_saldo=datos.get('solo_con_saldo', True),
+            lang=datos.get('lang', 'en_US'),
+        )
 
     def lineas(self, datos):
         """
-        Clientes con saldo pendiente al corte, agrupados por NIT, con
+        Clientes (con saldo, o todos si solo_con_saldo es False), agrupados por NIT, con
         antigüedad por documento: 0-30, 31-60, 61-90, +90 días.
         """
         lineas, totales = self._consolidar(datos, 'asset_receivable', 1)
@@ -157,7 +178,7 @@ class ReporteCuentasPagar(models.AbstractModel):
 
     def lineas(self, datos):
         """
-        Proveedores con saldo pendiente al corte, agrupados por NIT, con
+        Proveedores (con saldo, o todos si solo_con_saldo es False), agrupados por NIT, con
         antigüedad por documento: 0-30, 31-60, 61-90, +90 días.
         """
         cobrar = self.env['report.l10n_gt_extra.reporte_cuentas_cobrar']
