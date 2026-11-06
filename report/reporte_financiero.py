@@ -2,83 +2,44 @@
 
 from odoo import api, models
 
-
-def _to_str(val, lang='en_US'):
-    """Odoo 18: campos traducibles desde SQL raw retornan dict (JSONB).
-    Extrae el string para el idioma activo o el primero disponible."""
-    if isinstance(val, dict):
-        return val.get(lang) or val.get('en_US') or next(iter(val.values()), '')
-    return val or ''
+from . import bg_columnas, er_columnas
 
 
 class ReporteEstadoResultados(models.AbstractModel):
     _name = 'report.l10n_gt_extra.reporte_estado_resultados'
     _description = 'Estado de Resultados'
 
-    TIPOS_INGRESOS = ['income', 'income_other']
-    TIPOS_COSTOS = ['expense_direct_cost']
-    TIPOS_GASTOS = ['expense', 'expense_depreciation']
-
-    def _movimientos_cuentas(self, tipos, fecha_desde, fecha_hasta):
-        tipos_str = ','.join(["'{}'".format(t) for t in tipos])
+    def _movimientos(self, fecha_desde, fecha_hasta):
+        """Debe y haber por cuenta de resultados y por mes, en el rango."""
         self.env.cr.execute(
-            "SELECT a.id, a.name, a.account_type, "
-            "COALESCE(SUM(l.debit),0) AS debe, COALESCE(SUM(l.credit),0) AS haber "
+            "SELECT l.account_id, date_trunc('month', l.date)::date AS mes, "
+            "COALESCE(SUM(l.debit), 0) AS debe, COALESCE(SUM(l.credit), 0) AS haber "
             "FROM account_move_line l "
             "JOIN account_account a ON l.account_id = a.id "
             "WHERE l.parent_state = 'posted' "
             "AND l.date >= %s AND l.date <= %s "
             "AND l.company_id = %s "
-            "AND a.account_type IN (" + tipos_str + ") "
-            "GROUP BY a.id, a.name, a.account_type",
-            (fecha_desde, fecha_hasta, self.env.company.id)
+            "AND a.account_type IN %s "
+            "GROUP BY l.account_id, date_trunc('month', l.date)",
+            (fecha_desde, fecha_hasta, self.env.company.id, er_columnas.TIPOS_RESULTADOS),
         )
-        rows = self.env.cr.dictfetchall()
-
-        lang = self.env.lang or 'en_US'
-        account_ids = [r['id'] for r in rows]
-        cuentas = {a.id: a for a in self.env['account.account'].browse(account_ids)}
-
-        lineas = []
-        total = 0
-        for r in rows:
-            cuenta = cuentas.get(r['id'])
-            codigo = cuenta.code if cuenta and hasattr(cuenta, 'code') and cuenta.code else ''
-            nombre = _to_str(r['name'], lang)
-            if r['account_type'] in self.TIPOS_INGRESOS:
-                saldo = r['haber'] - r['debe']
-            else:
-                saldo = r['debe'] - r['haber']
-            total += saldo
-            lineas.append({'codigo': codigo, 'nombre': nombre, 'saldo': saldo})
-
-        lineas = sorted(lineas, key=lambda l: l['codigo'] or l['nombre'])
-        return lineas, total
+        movimientos = self.env.cr.dictfetchall()
+        ids = list({m['account_id'] for m in movimientos})
+        cuentas = {}
+        for c in self.env['account.account'].with_company(self.env.company).browse(ids):
+            cuentas[c.id] = {
+                'codigo': c.code or '',
+                'nombre': c.name or '',
+                'account_type': c.account_type,
+            }
+        return cuentas, movimientos
 
     def datos(self, datos_form):
-        fecha_desde = datos_form['fecha_desde']
-        fecha_hasta = datos_form['fecha_hasta']
-
-        ingresos, total_ingresos = self._movimientos_cuentas(
-            self.TIPOS_INGRESOS, fecha_desde, fecha_hasta)
-        costos, total_costos = self._movimientos_cuentas(
-            self.TIPOS_COSTOS, fecha_desde, fecha_hasta)
-        gastos, total_gastos = self._movimientos_cuentas(
-            self.TIPOS_GASTOS, fecha_desde, fecha_hasta)
-
-        utilidad_bruta = total_ingresos - total_costos
-        utilidad_neta = utilidad_bruta - total_gastos
-
-        return {
-            'ingresos': ingresos,
-            'total_ingresos': total_ingresos,
-            'costos': costos,
-            'total_costos': total_costos,
-            'gastos': gastos,
-            'total_gastos': total_gastos,
-            'utilidad_bruta': utilidad_bruta,
-            'utilidad_neta': utilidad_neta,
-        }
+        fecha_desde = er_columnas.a_fecha(datos_form['fecha_desde'])
+        fecha_hasta = er_columnas.a_fecha(datos_form['fecha_hasta'])
+        modo = datos_form.get('modo') or 'normal'
+        cuentas, movimientos = self._movimientos(fecha_desde, fecha_hasta)
+        return er_columnas.construir(cuentas, movimientos, modo, fecha_desde, fecha_hasta)
 
     @api.model
     def _get_report_values(self, docids, data=None):
@@ -90,6 +51,8 @@ class ReporteEstadoResultados(models.AbstractModel):
             'data': data['form'],
             'docs': docs,
             'datos': self.datos,
+            'celdas': er_columnas.celdas,
+            'formato': er_columnas.formato,
             'current_company_id': self.env.company,
         }
 
@@ -98,86 +61,44 @@ class ReporteBalanceGeneral(models.AbstractModel):
     _name = 'report.l10n_gt_extra.reporte_balance_general'
     _description = 'Balance General'
 
-    TIPOS_ACTIVO = [
-        'asset_receivable', 'asset_cash', 'asset_current',
-        'asset_non_current', 'asset_prepayments', 'asset_fixed',
-    ]
-    TIPOS_PASIVO = [
-        'liability_payable', 'liability_credit_card',
-        'liability_current', 'liability_non_current',
-    ]
-    TIPOS_CAPITAL = ['equity', 'equity_unaffected']
-
-    def _saldo_cuenta(self, account_id, fecha_hasta):
+    def _movimientos(self, fecha_hasta):
+        """Debe y haber por cuenta de balance y por mes, hasta el corte."""
         self.env.cr.execute(
-            "SELECT COALESCE(SUM(debit) - SUM(credit), 0) AS saldo "
-            "FROM account_move_line "
-            "WHERE account_id = %s AND parent_state = 'posted' AND date <= %s",
-            (account_id, fecha_hasta)
-        )
-        row = self.env.cr.dictfetchall()
-        return row[0]['saldo'] if row else 0
-
-    def _cuentas_con_saldo(self, tipos, fecha_hasta):
-        tipos_str = ','.join(["'{}'".format(t) for t in tipos])
-        self.env.cr.execute(
-            "SELECT DISTINCT a.id, a.name, a.account_type "
+            "SELECT l.account_id, date_trunc('month', l.date)::date AS fecha, "
+            "COALESCE(SUM(l.debit), 0) AS debe, COALESCE(SUM(l.credit), 0) AS haber "
             "FROM account_move_line l "
             "JOIN account_account a ON l.account_id = a.id "
             "WHERE l.parent_state = 'posted' AND l.date <= %s "
             "AND l.company_id = %s "
-            "AND a.account_type IN (" + tipos_str + ")",
-            (fecha_hasta, self.env.company.id)
+            "AND a.account_type IN %s "
+            "GROUP BY l.account_id, date_trunc('month', l.date)",
+            (fecha_hasta, self.env.company.id, bg_columnas.TIPOS_BALANCE),
         )
-        rows = self.env.cr.dictfetchall()
-
-        lang = self.env.lang or 'en_US'
-        account_ids = [r['id'] for r in rows]
-        cuentas = {a.id: a for a in self.env['account.account'].browse(account_ids)}
-
-        lineas = []
-        total = 0
-        for r in rows:
-            cuenta = cuentas.get(r['id'])
-            codigo = cuenta.code if cuenta and hasattr(cuenta, 'code') and cuenta.code else ''
-            nombre = _to_str(r['name'], lang)
-            saldo_raw = self._saldo_cuenta(r['id'], fecha_hasta)
-            saldo = saldo_raw if r['account_type'] in self.TIPOS_ACTIVO else -saldo_raw
-            if saldo != 0:
-                lineas.append({'codigo': codigo, 'nombre': nombre, 'saldo': saldo})
-                total += saldo
-
-        lineas = sorted(lineas, key=lambda l: l['codigo'] or l['nombre'])
-        return lineas, total
+        movimientos = self.env.cr.dictfetchall()
+        ids = list({m['account_id'] for m in movimientos})
+        cuentas = {}
+        for c in self.env['account.account'].with_company(self.env.company).browse(ids):
+            cuentas[c.id] = {
+                'codigo': c.code or '',
+                'nombre': c.name or '',
+                'account_type': c.account_type,
+            }
+        return cuentas, movimientos
 
     def datos(self, datos_form):
-        fecha_hasta = datos_form['fecha_hasta']
-
-        activos, total_activo = self._cuentas_con_saldo(self.TIPOS_ACTIVO, fecha_hasta)
-        pasivos, total_pasivo = self._cuentas_con_saldo(self.TIPOS_PASIVO, fecha_hasta)
-        capital, total_capital = self._cuentas_con_saldo(self.TIPOS_CAPITAL, fecha_hasta)
+        fecha_hasta = er_columnas.a_fecha(datos_form['fecha_hasta'])
+        fecha_desde_er = er_columnas.a_fecha(
+            datos_form.get('fecha_desde_er') or fecha_hasta.replace(month=1, day=1))
+        modo = datos_form.get('modo') or 'normal'
 
         er = self.env['report.l10n_gt_extra.reporte_estado_resultados']
-        er_datos = er.datos({
-            'fecha_desde': datos_form.get('fecha_desde_er',
-                                          datos_form['fecha_hasta'][:4] + '-01-01'),
-            'fecha_hasta': fecha_hasta,
-        })
-        utilidad_periodo = er_datos['utilidad_neta']
-        total_capital_mas_utilidad = total_capital + utilidad_periodo
+        er_res = er.datos({'fecha_desde': fecha_desde_er, 'fecha_hasta': fecha_hasta,
+                           'modo': modo})
+        utilidades = bg_columnas.utilidades_por_columna(modo, er_res)
 
-        return {
-            'activos': activos,
-            'total_activo': total_activo,
-            'pasivos': pasivos,
-            'total_pasivo': total_pasivo,
-            'capital': capital,
-            'total_capital': total_capital,
-            'utilidad_periodo': utilidad_periodo,
-            'total_capital_mas_utilidad': total_capital_mas_utilidad,
-            'total_pasivo_capital': total_pasivo + total_capital_mas_utilidad,
-            'cuadre': total_activo - (total_pasivo + total_capital_mas_utilidad),
-        }
+        cuentas, movimientos = self._movimientos(fecha_hasta)
+        return bg_columnas.construir(cuentas, movimientos, utilidades, modo,
+                                     fecha_desde_er, fecha_hasta)
 
     @api.model
     def _get_report_values(self, docids, data=None):
@@ -189,5 +110,7 @@ class ReporteBalanceGeneral(models.AbstractModel):
             'data': data['form'],
             'docs': docs,
             'datos': self.datos,
+            'celdas': er_columnas.celdas,
+            'formato': er_columnas.formato,
             'current_company_id': self.env.company,
         }

@@ -80,7 +80,7 @@
     <template id="encabezado_folio">
         <t t-set="cia" t-value="current_company_id"/>
         <t t-set="dir_cia" t-value="', '.join(x for x in [cia.partner_id.street, cia.partner_id.street2, cia.partner_id.city, cia.partner_id.state_id.name, cia.partner_id.country_id.name] if x)"/>
-        <t t-set="f_ini" t-value="data.get('fecha_desde') or data.get('fecha_inicio')"/>
+        <t t-set="f_ini" t-value="data.get('fecha_desde') or data.get('fecha_inicio') or data.get('fecha_desde_er')"/>
         <t t-set="f_fin" t-value="data.get('fecha_hasta') or data.get('fecha_corte')"/>
         <div class="header" style="font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #000;">
             <table style="width: 100%; border-bottom: 2px solid #000; border-collapse: collapse;">
