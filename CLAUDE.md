@@ -13,7 +13,7 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.55` (nov. 2026). En producción en las 4 bases de
+- **Versión:** `18.0.5.56` (nov. 2026). En producción en las 4 bases de
   SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
@@ -98,6 +98,39 @@ fuera de la lista se ignora y se usa la lógica anterior.
   acumulado y saldo final. Excel incluido.
 - Verificado en `tienda_odoo`: con todas las cuentas, asientos, líneas,
   debe y haber idénticos a Contabilidad → Asientos contables.
+
+### Estado de resultados y Balance General (desde 5.56)
+- Asistentes con **Tipo de reporte** (`modo`, botones): `normal`,
+  `por_mes`, `acumulativo`. Aviso azul en el asistente (`nota_modo`) que
+  dice cuál es el «Mes» en el acumulativo.
+- **Estado de resultados:** normal = una columna; por_mes = una columna
+  por mes (máximo 12) y Total; acumulativo = Acumulado (meses anteriores
+  del rango) | Mes (mes de la **fecha final**) | % | Total | %. El % es
+  sobre los ingresos de esa columna. Si la fecha final cae a mitad de mes,
+  el Mes cubre solo esos días; si no hay movimiento sale en 0.00 (decidido:
+  no se cambia, se avisa).
+- **Balance general:** normal = saldo al corte; por_mes = saldo al cierre
+  de cada mes desde «Inicio período resultados» (máximo 12, sin Total);
+  acumulativo = Saldo anterior | Mes (movimiento) | Saldo al corte. La
+  utilidad de cada columna sale del ER del mismo modo
+  (`utilidades_por_columna()`). Fila «Diferencia» en el resumen = cuadre.
+- Los dos llevan **Resumen** y **Detalle por sección** (ER: INGRESOS,
+  COSTO DE VENTAS, GASTOS; BG: ACTIVO, PASIVO, CAPITAL), cuentas ordenadas
+  por código y total por sección. **Sin niveles intermedios** (4, 4.1,
+  4.1.01): el usuario los descartó. Las bases de SOLUCONTA no tienen
+  `account.group` y sus códigos son `4.1.01.01`.
+- **Resumen y Detalle en una sola tabla** (`l10n_gt_extra.cuerpo_financiero`)
+  para que las columnas se alineen. **No usar anchos fijos**: el usuario
+  no los quiere (montos grandes no cabrían).
+- **Costo de ventas** = `expense_direct_cost` **o** código que empieza en
+  `5`. En SOLUCONTA las cuentas 5.x son de tipo `expense`: hasta 5.55 el
+  costo salía en 0. La utilidad neta no cambia.
+- Título: solo «del dd/mm/aaaa al dd/mm/aaaa». Negativos entre paréntesis.
+  Encabezado del balance: «del inicio período resultados al corte».
+  Moneda en singular («Quetzal»), aceptado. PDF horizontal salvo normal.
+- Lógica pura en `report/er_columnas.py` y `report/bg_columnas.py`, con
+  pruebas; Excel común `excel_financiero()` en el asistente. El balance
+  ya no hace una consulta por cuenta.
 
 ### Retenciones ISR
 Lista las facturas con el impuesto de retención ISR elegido (el que
@@ -262,7 +295,8 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 - El repo no tiene `.pre-commit-config.yaml`: se valida con `py_compile`
   y el parser XML. No introducir pre-commit en un cambio funcional.
 - Desde v5.54 hay `tests/` (funciones puras de `report/tipos_dte.py` y,
-  desde 5.55, `agrupar_documentos()` de CxC/CxP,
+  desde 5.55, `agrupar_documentos()` de CxC/CxP; desde 5.56,
+  `report/er_columnas.py` y `report/bg_columnas.py`,
   con objetos simulados; no tocan la base). Se corren con
   `--test-enable --test-tags /l10n_gt_extra`. **No** usar
   `AccountTestInvoicingCommon`: en `tienda_odoo` falla al crear el usuario
@@ -297,6 +331,7 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 
 | Versión | Cambio principal |
 |---|---|
+| 5.56 | Estado de resultados y Balance General: modos normal / por mes / acumulativo, resumen y detalle por sección; costo = cuentas 5.x |
 | 5.55 | CxC/CxP: el cheque «Solo con saldo pendiente» funciona; sin él salen también los contactos pagados (saldo 0.00) |
 | 5.54 | Tipo real de DTE desde `gt_dte_tipo` (importador); `l10n_gt_fel_dte_code` solo si el documento tiene UUID; columna Peq. por tipo y afiliación del emisor; crédito fiscal según régimen del comprador (de `l10n_gt_peq`, con historial, elegible en el asistente) y tipo de documento; corregido el signo de las NC de proveedor PEQ; primeras pruebas automáticas |
 | 5.53 | Montos, fecha, tipo, documento y NIT sin cortes de línea en el PDF (`l10n_gt_nowrap`) |
