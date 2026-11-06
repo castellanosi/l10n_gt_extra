@@ -1,6 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
+    <!-- ============ CUERPO COMÚN: ESTADO DE RESULTADOS Y BALANCE ============ -->
+    <!-- Una sola tabla para Resumen y Detalle: las columnas quedan alineadas
+         sin anchos fijos. Espera `res` (de er_columnas / bg_columnas). -->
+    <template id="cuerpo_financiero">
+        <t t-set="cols" t-value="res['columnas']"/>
+        <t t-set="ing" t-value="res['ingresos_col']"/>
+        <t t-set="ncol" t-value="2 + len(res['encabezados'])"/>
+        <t t-set="tam" t-value="'8px' if len(res['encabezados']) &gt; 7 else ('10px' if len(res['encabezados']) &gt; 1 else '11px')"/>
+        <div style="font-size: 11px; margin-bottom: 6px;">
+            Expresado en <span t-esc="current_company_id.currency_id.currency_unit_label or current_company_id.currency_id.name"/>
+        </div>
+        <table class="table table-condensed" t-attf-style="font-size: {{tam}};">
+            <thead>
+                <tr style="background:#ede9f7;">
+                    <th class="l10n_gt_nowrap">Cuenta</th>
+                    <th></th>
+                    <th t-foreach="res['encabezados']" t-as="h" class="text-right text-end l10n_gt_nowrap"><span t-esc="h"/></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background:#f4f2fb; font-weight: bold;">
+                    <td t-att-colspan="ncol">RESUMEN</td>
+                </tr>
+                <tr t-foreach="res['resumen']" t-as="r" t-att-style="'font-weight: bold;' if r['negrita'] else None">
+                    <td colspan="2"><span t-esc="r['etiqueta']"/></td>
+                    <td t-foreach="celdas(r['valores'], cols, ing)" t-as="c" class="text-right text-end l10n_gt_nowrap"><span t-esc="formato(c['v'], c['pct'])"/></td>
+                </tr>
+                <tr><td t-att-colspan="ncol" style="border: none;">&#160;</td></tr>
+                <t t-foreach="res['secciones']" t-as="sec">
+                    <t t-if="sec['filas']">
+                        <tr style="background:#f4f2fb; font-weight: bold;">
+                            <td t-att-colspan="ncol"><span t-esc="sec['titulo']"/></td>
+                        </tr>
+                        <tr t-foreach="sec['filas']" t-as="f">
+                            <td class="l10n_gt_nowrap"><span t-esc="f['codigo']"/></td>
+                            <td><span t-esc="f['nombre']"/></td>
+                            <td t-foreach="celdas(f['valores'], cols, ing)" t-as="c" class="text-right text-end l10n_gt_nowrap"><span t-esc="formato(c['v'], c['pct'])"/></td>
+                        </tr>
+                        <tr style="font-weight: bold; border-top: 1px solid #000;">
+                            <td colspan="2">Total <span t-esc="sec['titulo'].lower()"/></td>
+                            <td t-foreach="celdas(sec['total'], cols, ing)" t-as="c" class="text-right text-end l10n_gt_nowrap"><span t-esc="formato(c['v'], c['pct'])"/></td>
+                        </tr>
+                    </t>
+                </t>
+            </tbody>
+        </table>
+        <div class="row mt-4">
+            <div class="col-4 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Preparado por</div></div>
+            <div class="col-4 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Contador</div></div>
+            <div class="col-4 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Gerente General</div></div>
+        </div>
+    </template>
+
     <!-- ===================== ESTADO DE RESULTADOS ===================== -->
     <template id="reporte_estado_resultados">
         <t t-call="web.html_container">
@@ -12,52 +65,7 @@
             <t t-call="l10n_gt_extra.cuerpo_reporte">
                 <div class="page">
                     <t t-set="res" t-value="datos(data)"/>
-                    <table class="table table-condensed mb-0" style="font-size:11px;">
-                        <thead><tr style="background:#ede9f7;"><th colspan="2"><strong>Ingresos</strong></th></tr></thead>
-                        <tbody>
-                            <tr t-foreach="res['ingresos']" t-as="l">
-                                <td><span t-esc="l['codigo']"/><t t-if="l['codigo']"> — </t><span t-esc="l['nombre']"/></td>
-                                <td class="text-right text-end"><span t-esc="l['saldo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
-                            </tr>
-                        </tbody>
-                        <tfoot><tr><td><strong>Total ingresos</strong></td><td class="text-right text-end"><strong><span t-esc="res['total_ingresos']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td></tr></tfoot>
-                    </table>
-                    <table class="table table-condensed mb-0 mt-1" style="font-size:11px;">
-                        <thead><tr style="background:#fef3cd;"><th colspan="2"><strong>Costo de ventas</strong></th></tr></thead>
-                        <tbody>
-                            <tr t-foreach="res['costos']" t-as="l">
-                                <td><span t-esc="l['codigo']"/><t t-if="l['codigo']"> — </t><span t-esc="l['nombre']"/></td>
-                                <td class="text-right text-end"><span t-esc="l['saldo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
-                            </tr>
-                        </tbody>
-                        <tfoot><tr><td><strong>Total costo de ventas</strong></td><td class="text-right text-end"><strong><span t-esc="res['total_costos']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td></tr></tfoot>
-                    </table>
-                    <table class="table table-condensed mb-0 mt-0" style="font-size:11px;">
-                        <tbody><tr style="background:#d1e7dd;"><td><strong>Utilidad bruta</strong></td><td class="text-right text-end"><strong><span t-esc="res['utilidad_bruta']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td></tr></tbody>
-                    </table>
-                    <table class="table table-condensed mb-0 mt-1" style="font-size:11px;">
-                        <thead><tr style="background:#f8d7da;"><th colspan="2"><strong>Gastos de operación</strong></th></tr></thead>
-                        <tbody>
-                            <tr t-foreach="res['gastos']" t-as="l">
-                                <td><span t-esc="l['codigo']"/><t t-if="l['codigo']"> — </t><span t-esc="l['nombre']"/></td>
-                                <td class="text-right text-end"><span t-esc="l['saldo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
-                            </tr>
-                        </tbody>
-                        <tfoot><tr><td><strong>Total gastos de operación</strong></td><td class="text-right text-end"><strong><span t-esc="res['total_gastos']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td></tr></tfoot>
-                    </table>
-                    <table class="table table-condensed mt-1" style="font-size:11px;">
-                        <tbody>
-                            <tr style="background:#e2e3e5;">
-                                <td><strong t-if="res['utilidad_neta'] >= 0">Utilidad neta del período</strong><strong t-else="">Pérdida neta del período</strong></td>
-                                <td class="text-right text-end"><strong><span t-esc="res['utilidad_neta']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div class="row mt-4">
-                        <div class="col-4 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Preparado por</div></div>
-                        <div class="col-4 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Contador</div></div>
-                        <div class="col-4 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Gerente General</div></div>
-                    </div>
+                    <t t-call="l10n_gt_extra.cuerpo_financiero"/>
                 </div>
             </t>
         </t>
@@ -74,60 +82,7 @@
             <t t-call="l10n_gt_extra.cuerpo_reporte">
                 <div class="page">
                     <t t-set="res" t-value="datos(data)"/>
-                    <div class="row">
-                        <div class="col-6">
-                            <table class="table table-condensed" style="font-size:11px;">
-                                <thead><tr style="background:#dae4f7;"><th colspan="2"><strong>Activos</strong></th></tr></thead>
-                                <tbody>
-                                    <tr t-foreach="res['activos']" t-as="l">
-                                        <td><span t-esc="l['codigo']"/><t t-if="l['codigo']"> — </t><span t-esc="l['nombre']"/></td>
-                                        <td class="text-right text-end"><span t-esc="l['saldo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
-                                    </tr>
-                                </tbody>
-                                <tfoot><tr style="background:#e2e3e5;"><td><strong>Total activos</strong></td><td class="text-right text-end"><strong><span t-esc="res['total_activo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td></tr></tfoot>
-                            </table>
-                        </div>
-                        <div class="col-6">
-                            <table class="table table-condensed" style="font-size:11px;">
-                                <thead><tr style="background:#fef3cd;"><th colspan="2"><strong>Pasivos</strong></th></tr></thead>
-                                <tbody>
-                                    <tr t-foreach="res['pasivos']" t-as="l">
-                                        <td><span t-esc="l['codigo']"/><t t-if="l['codigo']"> — </t><span t-esc="l['nombre']"/></td>
-                                        <td class="text-right text-end"><span t-esc="l['saldo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
-                                    </tr>
-                                </tbody>
-                                <tfoot><tr><td><strong>Total pasivos</strong></td><td class="text-right text-end"><strong><span t-esc="res['total_pasivo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td></tr></tfoot>
-                            </table>
-                            <table class="table table-condensed mt-1" style="font-size:11px;">
-                                <thead><tr style="background:#d1e7dd;"><th colspan="2"><strong>Capital contable</strong></th></tr></thead>
-                                <tbody>
-                                    <tr t-foreach="res['capital']" t-as="l">
-                                        <td><span t-esc="l['codigo']"/><t t-if="l['codigo']"> — </t><span t-esc="l['nombre']"/></td>
-                                        <td class="text-right text-end"><span t-esc="l['saldo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
-                                    </tr>
-                                    <tr>
-                                        <td><t t-if="res['utilidad_periodo'] >= 0">Utilidad del período</t><t t-else="">Pérdida del período</t></td>
-                                        <td class="text-right text-end"><span t-esc="res['utilidad_periodo']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></td>
-                                    </tr>
-                                </tbody>
-                                <tfoot>
-                                    <tr><td><strong>Total capital</strong></td><td class="text-right text-end"><strong><span t-esc="res['total_capital_mas_utilidad']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td></tr>
-                                    <tr style="background:#e2e3e5;"><td><strong>Total pasivos + capital</strong></td><td class="text-right text-end"><strong><span t-esc="res['total_pasivo_capital']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/></strong></td></tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                    </div>
-                    <t t-if="abs(res['cuadre']) &gt; 0.01">
-                        <div style="background:#f8d7da; padding:6px; border-radius:4px; font-size:11px; margin-top:6px;">
-                            <strong>Diferencia de cuadre:</strong>
-                            <span t-esc="res['cuadre']" t-options="{'widget': 'monetary', 'display_currency': current_company_id.currency_id}"/>
-                        </div>
-                    </t>
-                    <div class="row mt-4">
-                        <div class="col-4 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Preparado por</div></div>
-                        <div class="col-4 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Contador</div></div>
-                        <div class="col-4 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Gerente General</div></div>
-                    </div>
+                    <t t-call="l10n_gt_extra.cuerpo_financiero"/>
                 </div>
             </t>
         </t>

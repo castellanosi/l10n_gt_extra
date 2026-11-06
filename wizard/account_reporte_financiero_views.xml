@@ -14,10 +14,14 @@
                         <field name="fecha_hasta"/>
                     </group>
                     <group>
+                        <field name="modo" widget="radio"/>
                         <field name="name" invisible="1"/>
                         <field name="archivo" readonly="1" filename="name"/>
                     </group>
                 </group>
+                <div class="alert alert-info mb-2" role="status" invisible="not nota_modo">
+                    <field name="nota_modo" readonly="1" nolabel="1"/>
+                </div>
                 <footer>
                     <button name="preview_report" string="&#x1F441; Previsualizar" type="object" class="btn-secondary"/>
 
@@ -62,10 +66,14 @@
                         <field name="fecha_desde_er"/>
                     </group>
                     <group>
+                        <field name="modo" widget="radio"/>
                         <field name="name" invisible="1"/>
                         <field name="archivo" readonly="1" filename="name"/>
                     </group>
                 </group>
+                <div class="alert alert-info mb-2" role="status" invisible="not nota_modo">
+                    <field name="nota_modo" readonly="1" nolabel="1"/>
+                </div>
                 <footer>
                     <button name="preview_report" string="&#x1F441; Previsualizar" type="object" class="btn-secondary"/>
 
