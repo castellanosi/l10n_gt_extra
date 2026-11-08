@@ -88,4 +88,69 @@
         </t>
     </template>
 
+    <!-- ===================== FLUJO DE EFECTIVO ===================== -->
+    <!-- Una sola tabla: renglones del estado, con el detalle por cuenta
+         debajo de cada renglón (si se pidió). Sin anchos fijos. -->
+    <template id="reporte_flujo_efectivo">
+        <t t-call="web.html_container">
+            <t t-set="data_report_margin_top" t-value="40"/>
+            <t t-set="data_report_header_spacing" t-value="34"/>
+            <t t-call="l10n_gt_extra.encabezado_folio">
+                <t t-set="titulo" t-value="'Estado de Flujo de Efectivo'"/>
+            </t>
+            <t t-call="l10n_gt_extra.cuerpo_reporte">
+                <div class="page">
+                    <t t-set="par" t-value="filas(data)"/>
+                    <t t-set="res" t-value="par[0]"/>
+                    <t t-set="ncol" t-value="2 + len(res['encabezados'])"/>
+                    <t t-set="tam" t-value="'8px' if len(res['encabezados']) &gt; 7 else ('10px' if len(res['encabezados']) &gt; 1 else '11px')"/>
+                    <div style="font-size: 11px; margin-bottom: 6px;">
+                        Método indirecto. Expresado en <span t-esc="current_company_id.currency_id.currency_unit_label or current_company_id.currency_id.name"/>
+                    </div>
+                    <table class="table table-condensed" t-attf-style="font-size: {{tam}};">
+                        <thead>
+                            <tr style="background:#ede9f7;">
+                                <th class="l10n_gt_nowrap">Cuenta</th>
+                                <th>Concepto</th>
+                                <th t-foreach="res['encabezados']" t-as="h" class="text-right text-end l10n_gt_nowrap"><span t-esc="h"/></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="par[1]" t-as="f">
+                                <tr t-if="f['tipo'] == 'seccion'" style="background:#f4f2fb; font-weight: bold;">
+                                    <td t-att-colspan="ncol"><span t-esc="f['etiqueta']"/></td>
+                                </tr>
+                                <tr t-elif="f['tipo'] == 'subtitulo'">
+                                    <td></td>
+                                    <td t-att-colspan="ncol - 1" style="font-style: italic;"><span t-esc="f['etiqueta']"/></td>
+                                </tr>
+                                <tr t-elif="f['tipo'] == 'cuenta'" style="color: #555;">
+                                    <td class="l10n_gt_nowrap" style="padding-left: 14px;"><span t-esc="f['codigo']"/></td>
+                                    <td style="padding-left: 14px;"><span t-esc="f['etiqueta']"/></td>
+                                    <td t-foreach="f['valores']" t-as="v" class="text-right text-end l10n_gt_nowrap"><span t-esc="formato(v)"/></td>
+                                </tr>
+                                <tr t-elif="f['tipo'] == 'nota'" style="font-style: italic;">
+                                    <td></td>
+                                    <td><span t-esc="f['etiqueta']"/></td>
+                                    <td t-foreach="f['valores']" t-as="v" class="text-right text-end l10n_gt_nowrap"><span t-esc="formato(v)"/></td>
+                                </tr>
+                                <tr t-else=""
+                                    t-att-style="'font-weight: bold; border-top: 1px solid #000;' if f['tipo'] == 'total' or f.get('negrita') else None">
+                                    <td></td>
+                                    <td><span t-esc="f['etiqueta']"/></td>
+                                    <td t-foreach="f['valores']" t-as="v" class="text-right text-end l10n_gt_nowrap"><span t-esc="formato(v)"/></td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                    <div class="row mt-4">
+                        <div class="col-4 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Preparado por</div></div>
+                        <div class="col-4 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Contador</div></div>
+                        <div class="col-4 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Gerente General</div></div>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+
 </odoo>

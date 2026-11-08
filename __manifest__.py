@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 {
     'name': 'Guatemala - reportes y funcionalidad extra',
-    'version': '18.0.5.56',
+    'version': '18.0.5.57',
     'category': 'Accounting/Localizations/Reporting',
     'description': """
         Reportes requeridos por la SAT y otra funcionalidad extra para llevar
@@ -23,6 +23,7 @@
         - Libro Pequeño Contribuyente (Compras/Ventas)
         - Estado de Resultados
         - Balance General
+        - Estado de Flujo de Efectivo (método indirecto)
     """,
     'author': 'AI Guatemala',
     'website': '',
