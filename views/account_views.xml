@@ -74,5 +74,28 @@
             </xpath>
         </field>
     </record>
-    
+
+    <record id="view_account_form_flujo" model="ir.ui.view">
+        <field name="name">account.account.form.flujo.l10n_gt_extra</field>
+        <field name="model">account.account</field>
+        <field name="inherit_id" ref="account.view_account_form"/>
+        <field name="arch" type="xml">
+            <field name="account_type" position="after">
+                <field name="l10n_gt_flujo_clase"
+                       invisible="account_type in ['income', 'income_other', 'expense', 'expense_depreciation', 'expense_direct_cost', 'off_balance']"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_account_list_flujo" model="ir.ui.view">
+        <field name="name">account.account.list.flujo.l10n_gt_extra</field>
+        <field name="model">account.account</field>
+        <field name="inherit_id" ref="account.view_account_list"/>
+        <field name="arch" type="xml">
+            <field name="account_type" position="after">
+                <field name="l10n_gt_flujo_clase" optional="hide"/>
+            </field>
+        </field>
+    </record>
+
 </odoo>
