@@ -4,6 +4,7 @@ from odoo import models, fields, Command, api, _
 from odoo.exceptions import UserError, ValidationError
 from odoo.addons.l10n_gt_extra import a_letras
 from odoo.release import version_info
+from odoo.addons.l10n_gt_extra.report.fe_columnas import CLASES as CLASES_FLUJO
 
 import datetime
 import logging
@@ -148,6 +149,18 @@ class AccountMove(models.Model):
             if was_posted:
                 # action_post no re-emite FEL si ya existe UUID/firma
                 factura.action_post()
+
+class AccountAccount(models.Model):
+    _inherit = "account.account"
+
+    l10n_gt_flujo_clase = fields.Selection(
+        CLASES_FLUJO,
+        string="Clasificación en flujo de efectivo",
+        help="Renglón del Estado de Flujo de Efectivo donde se muestra la variación de esta "
+             "cuenta. Vacío: se decide por el tipo de cuenta (las cuentas transitorias de "
+             "pagos y transferencias cuentan como efectivo).",
+    )
+
 
 class AccountMoveLine(models.Model):
     _inherit = "account.move.line"

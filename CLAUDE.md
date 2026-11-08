@@ -13,7 +13,7 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.56` (nov. 2026). En producción en las 4 bases de
+- **Versión:** `18.0.5.57` (nov. 2026; 5.56 en producción). En producción en las 4 bases de
   SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
@@ -131,6 +131,55 @@ fuera de la lista se ignora y se usa la lógica anterior.
 - Lógica pura en `report/er_columnas.py` y `report/bg_columnas.py`, con
   pruebas; Excel común `excel_financiero()` en el asistente. El balance
   ya no hace una consulta por cuenta.
+
+### Estado de flujo de efectivo (desde 5.57)
+- **Método indirecto** (NIIF para PYMES, Secc. 7). Mismos modos que el ER
+  (`normal`, `por_mes`, `acumulativo`, sin %). En el Total por mes,
+  «efectivo al inicio» = el del primer mes y «al final» = el del último.
+- Cálculo por partida doble (`report/fe_columnas.py`): utilidad neta =
+  haber − debe de las cuentas de resultados (igual al ER, hay prueba);
+  cada cuenta de balance aporta haber − debe de su movimiento.
+  **Comprobación** = saldo real de las cuentas de efectivo y
+  **Diferencia** (debe ser 0.00): si no, hay una cuenta mal clasificada.
+- Campo `account.account.l10n_gt_flujo_clase` («Clasificación en flujo de
+  efectivo», en el formulario de la cuenta y opcional en la lista). Valores:
+  `efectivo`, `op_cobrar`, `op_inventario`, `op_activo`, `op_pagar`,
+  `op_pasivo`, `depreciacion`, `inversion`, `fin_pasivo`, `fin_capital`,
+  `excluir`. **Vacío = regla por omisión solo por tipo** (`POR_TIPO`),
+  salvo las **cuentas transitorias de Odoo** (recibos/pagos pendientes,
+  suspenso, transferencia de liquidez, leídas de la compañía y de los
+  diarios con `'campo' in _fields`), que son **efectivo** (decisión del
+  usuario 07/11/2026: se liquidan casi de inmediato).
+- **En SOLUCONTA los tipos no sirven** para el flujo: PPE `1.2.01.x` y
+  depreciación acumulada `1.2.02.x` son `asset_current`; en `conta_gen`
+  `1.2.01.04 Vehiculos` es `liability_non_current` (error de datos, avisar
+  al contador). Se corrige llenando el campo en cada base (script por base,
+  revisado por el contador), **nunca** con reglas por código en el módulo.
+- `excluir` = cuentas que reciben el cierre del ejercicio. Si el rango
+  incluye el asiento de cierre, la Diferencia lo muestra (es esperado).
+- Detalle por cuenta debajo de cada renglón (casilla «Detalle por
+  cuenta»). PDF horizontal salvo normal; Excel con `excel_flujo()`.
+
+### Conciliación bancaria — diseño aprobado para 5.58 (no programado)
+- Diagnóstico 07/11/2026: OCA `account_reconcile_oca` instalado en las 4
+  bases; extractos solo en `conta_ic` (229 líneas, todas conciliadas) y
+  `conta_gen` (8). Todos los pagos usan el método «Manual»: **no** se puede
+  distinguir por método de pago.
+- **Todo movimiento de una cuenta de banco se considera cobrado**, salvo
+  los marcados **en tránsito**. Se trabaja sobre la cuenta del diario de
+  banco, no sobre el origen (importador, COD, botón Pagar, cheques de
+  impuestos o sueldos): **no** poner la marca en el asistente de Pagar.
+- Campos en `account.move.line` (cuentas de banco): «En tránsito» y
+  «Fecha de cobro en banco». Pendiente al corte = en tránsito, fecha <=
+  corte y (sin fecha de cobro o fecha de cobro > corte). Las líneas de
+  extracto nunca están en tránsito.
+- Menú **«Movimientos en tránsito»**: lista de líneas de banco con filtro
+  en tránsito; ahí se marcan y se pone la fecha de cobro (acción masiva).
+- Reporte: Saldo según libros + cheques en tránsito − depósitos en tránsito
+  = saldo según banco (calculado); el contador **escribe** el saldo del
+  estado de cuenta en el asistente (**no se guarda**) y sale la Diferencia.
+- Corregir además: pendientes de fechas anteriores al «Del» deben seguir
+  saliendo; `_saldo_libro` sin filtro de compañía.
 
 ### Retenciones ISR
 Lista las facturas con el impuesto de retención ISR elegido (el que
@@ -296,8 +345,8 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
   y el parser XML. No introducir pre-commit en un cambio funcional.
 - Desde v5.54 hay `tests/` (funciones puras de `report/tipos_dte.py` y,
   desde 5.55, `agrupar_documentos()` de CxC/CxP; desde 5.56,
-  `report/er_columnas.py` y `report/bg_columnas.py`,
-  con objetos simulados; no tocan la base). Se corren con
+  `report/er_columnas.py` y `report/bg_columnas.py`; desde 5.57,
+  `report/fe_columnas.py`), con objetos simulados; no tocan la base). Se corren con
   `--test-enable --test-tags /l10n_gt_extra`. **No** usar
   `AccountTestInvoicingCommon`: en `tienda_odoo` falla al crear el usuario
   de prueba (algún módulo OCA rompe `res.users.create` en tests).
@@ -331,6 +380,7 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 
 | Versión | Cambio principal |
 |---|---|
+| 5.57 | Estado de flujo de efectivo (método indirecto, normal / por mes / acumulativo) con comprobación; campo «Clasificación en flujo de efectivo» en la cuenta; transitorias de Odoo = efectivo |
 | 5.56 | Estado de resultados y Balance General: modos normal / por mes / acumulativo, resumen y detalle por sección; costo = cuentas 5.x |
 | 5.55 | CxC/CxP: el cheque «Solo con saldo pendiente» funciona; sin él salen también los contactos pagados (saldo 0.00) |
 | 5.54 | Tipo real de DTE desde `gt_dte_tipo` (importador); `l10n_gt_fel_dte_code` solo si el documento tiene UUID; columna Peq. por tipo y afiliación del emisor; crédito fiscal según régimen del comprador (de `l10n_gt_peq`, con historial, elegible en el asistente) y tipo de documento; corregido el signo de las NC de proveedor PEQ; primeras pruebas automáticas |
