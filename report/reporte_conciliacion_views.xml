@@ -1,5 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Bloque de movimientos en tránsito. Espera `titulo`, `filas`,
+         `vacio`, `total_titulo` y `total`. -->
+    <template id="conciliacion_bloque">
+        <tr>
+            <td colspan="4" style="padding:8px 4px 2px; font-weight:bold; border:none; border-bottom:1px solid #aaa;">
+                <span t-esc="titulo"/>
+            </td>
+        </tr>
+        <tr style="background:#ede9f7; font-weight:bold;">
+            <td class="l10n_gt_nowrap">Fecha</td>
+            <td class="l10n_gt_nowrap">Documento</td>
+            <td>Concepto</td>
+            <td class="text-right text-end l10n_gt_nowrap">Monto</td>
+        </tr>
+        <tr t-foreach="filas" t-as="r">
+            <td class="l10n_gt_nowrap"><span t-esc="r['fecha']" t-options="{'widget': 'date'}"/></td>
+            <td class="l10n_gt_nowrap"><span t-esc="r['documento']"/></td>
+            <td><span t-esc="r['concepto']"/></td>
+            <td class="text-right text-end l10n_gt_nowrap"><span t-esc="formato(r['monto'])"/></td>
+        </tr>
+        <tr t-if="not filas">
+            <td colspan="4" style="color:#888; font-style:italic;"><span t-esc="vacio"/></td>
+        </tr>
+        <tr style="font-weight:bold; border-top:1px solid #000;">
+            <td colspan="3" class="text-right text-end"><span t-esc="total_titulo"/></td>
+            <td class="text-right text-end l10n_gt_nowrap"><span t-esc="formato(total)"/></td>
+        </tr>
+    </template>
+
     <template id="reporte_conciliacion">
         <t t-call="web.html_container">
             <t t-set="data_report_margin_top" t-value="40"/>
@@ -9,165 +38,51 @@
             </t>
             <t t-call="l10n_gt_extra.cuerpo_reporte">
                 <div class="page">
+                    <t t-set="res" t-value="datos(data)"/>
                     <div style="font-size: 12px; margin-bottom: 8px;">
                         <strong>Cuenta:</strong> <span t-esc="data['cuenta_id'][1]"/>
+                        · Expresado en <span t-esc="current_company_id.currency_id.currency_unit_label or current_company_id.currency_id.name"/>
                     </div>
-
-                    <t t-set="res" t-value="datos(data)"/>
-
-                    <!-- ── Cuerpo principal ───────────────────────────── -->
-                    <table class="table table-sm" style="font-size:11px; width:100%;">
-
-                        <!-- Saldo extracto bancario -->
+                    <table class="table table-condensed" style="font-size: 11px;">
                         <tbody>
-                            <tr style="background:#e8f4fd;">
-                                <td style="width:55%; padding:6px 8px; font-weight:bold; border:1px solid #c0d8ec;">
-                                    Saldo según extracto bancario
-                                </td>
-                                <td style="width:45%; padding:6px 8px; text-align:right; font-weight:bold; border:1px solid #c0d8ec;">
-                                    <span t-esc="res['saldo_banco']"
-                                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
-                                </td>
+                            <tr style="background:#f4f2fb; font-weight:bold;">
+                                <td colspan="3">Saldo según libros</td>
+                                <td class="text-right text-end l10n_gt_nowrap"><span t-esc="formato(res['saldo_libro'])"/></td>
                             </tr>
-                        </tbody>
-
-                        <!-- Sección MÁS -->
-                        <tbody>
+                            <t t-call="l10n_gt_extra.conciliacion_bloque">
+                                <t t-set="titulo" t-value="'MÁS: Cheques y débitos en tránsito'"/>
+                                <t t-set="filas" t-value="res['cheques_pendientes']"/>
+                                <t t-set="vacio" t-value="'No hay cheques ni débitos en tránsito'"/>
+                                <t t-set="total_titulo" t-value="'Total cheques y débitos en tránsito'"/>
+                                <t t-set="total" t-value="res['total_cheques']"/>
+                            </t>
+                            <t t-call="l10n_gt_extra.conciliacion_bloque">
+                                <t t-set="titulo" t-value="'MENOS: Depósitos y créditos en tránsito'"/>
+                                <t t-set="filas" t-value="res['depositos_transito']"/>
+                                <t t-set="vacio" t-value="'No hay depósitos ni créditos en tránsito'"/>
+                                <t t-set="total_titulo" t-value="'Total depósitos y créditos en tránsito'"/>
+                                <t t-set="total" t-value="res['total_depositos']"/>
+                            </t>
+                            <tr><td colspan="4" style="border:none;">&#160;</td></tr>
+                            <tr style="background:#f4f2fb; font-weight:bold;">
+                                <td colspan="3">Saldo según banco (calculado)</td>
+                                <td class="text-right text-end l10n_gt_nowrap"><span t-esc="formato(res['saldo_banco_calculado'])"/></td>
+                            </tr>
                             <tr>
-                                <td colspan="2" style="padding:8px 8px 2px; font-weight:bold; font-size:11px; border:none; border-bottom:1px solid #aaa;">
-                                    MÁS: Depósitos y notas de crédito en tránsito
-                                </td>
+                                <td colspan="3">Saldo según estado de cuenta del banco</td>
+                                <td class="text-right text-end l10n_gt_nowrap"><span t-esc="formato(res['saldo_banco'])"/></td>
                             </tr>
-                            <tr style="background:#f0f0f0; font-size:10px;">
-                                <td style="padding:3px 8px; border:1px solid #ddd;"><strong>Fecha&#160;&#160;&#160;&#160;Doc. / Referencia&#160;&#160;&#160;&#160;Concepto</strong></td>
-                                <td style="padding:3px 8px; text-align:right; border:1px solid #ddd;"><strong>Monto</strong></td>
-                            </tr>
-                            <tr t-foreach="res['depositos_transito']" t-as="d">
-                                <td style="padding:2px 8px; border:1px solid #eee; font-size:10px;">
-                                    <span t-esc="d['fecha']" t-options="{'widget':'date'}"/>
-                                    &#160;&#160;
-                                    <span t-esc="d['documento']"/>
-                                    &#160;&#160;
-                                    <span t-esc="d['concepto']" style="color:#555;"/>
-                                </td>
-                                <td style="padding:2px 8px; text-align:right; border:1px solid #eee; font-size:10px;">
-                                    <span t-esc="d['monto']"
-                                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
-                                </td>
-                            </tr>
-                            <tr t-if="not res['depositos_transito']">
-                                <td colspan="2" style="padding:2px 8px; font-size:10px; color:#888; font-style:italic; border:1px solid #eee;">
-                                    No hay depósitos en tránsito
-                                </td>
-                            </tr>
-                            <tr style="background:#f0f0f0;">
-                                <td style="padding:4px 8px; border:1px solid #ddd; font-weight:bold; font-size:10px; text-align:right;">
-                                    Total depósitos y notas de crédito en tránsito
-                                </td>
-                                <td style="padding:4px 8px; text-align:right; border:1px solid #ddd; font-weight:bold; font-size:10px;">
-                                    <span t-esc="res['total_depositos']"
-                                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
-                                </td>
+                            <t t-set="cuadra" t-value="abs(res['diferencia']) &lt; 0.01"/>
+                            <tr t-attf-style="font-weight:bold; color: {{'#1a7a1a' if cuadra else '#c00'}}; background: {{'#d4edda' if cuadra else '#fde8e8'}};">
+                                <td colspan="3">Diferencia (debe ser 0.00)<t t-if="cuadra"> &#10003; CONCILIADO</t></td>
+                                <td class="text-right text-end l10n_gt_nowrap"><span t-esc="formato(res['diferencia'])"/></td>
                             </tr>
                         </tbody>
-
-                        <!-- Sección MENOS -->
-                        <tbody>
-                            <tr>
-                                <td colspan="2" style="padding:8px 8px 2px; font-weight:bold; font-size:11px; border:none; border-bottom:1px solid #aaa;">
-                                    MENOS: Cheques y notas de débito pendientes
-                                </td>
-                            </tr>
-                            <tr style="background:#f0f0f0; font-size:10px;">
-                                <td style="padding:3px 8px; border:1px solid #ddd;"><strong>Fecha&#160;&#160;&#160;&#160;Doc. / Referencia&#160;&#160;&#160;&#160;Concepto</strong></td>
-                                <td style="padding:3px 8px; text-align:right; border:1px solid #ddd;"><strong>Monto</strong></td>
-                            </tr>
-                            <tr t-foreach="res['cheques_pendientes']" t-as="c">
-                                <td style="padding:2px 8px; border:1px solid #eee; font-size:10px;">
-                                    <span t-esc="c['fecha']" t-options="{'widget':'date'}"/>
-                                    &#160;&#160;
-                                    <span t-esc="c['documento']"/>
-                                    &#160;&#160;
-                                    <span t-esc="c['concepto']" style="color:#555;"/>
-                                </td>
-                                <td style="padding:2px 8px; text-align:right; border:1px solid #eee; font-size:10px;">
-                                    <span t-esc="c['monto']"
-                                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
-                                </td>
-                            </tr>
-                            <tr t-if="not res['cheques_pendientes']">
-                                <td colspan="2" style="padding:2px 8px; font-size:10px; color:#888; font-style:italic; border:1px solid #eee;">
-                                    No hay cheques ni notas de débito pendientes
-                                </td>
-                            </tr>
-                            <tr style="background:#f0f0f0;">
-                                <td style="padding:4px 8px; border:1px solid #ddd; font-weight:bold; font-size:10px; text-align:right;">
-                                    Total cheques y notas de débito pendientes
-                                </td>
-                                <td style="padding:4px 8px; text-align:right; border:1px solid #ddd; font-weight:bold; font-size:10px;">
-                                    <span t-esc="res['total_cheques']"
-                                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
-                                </td>
-                            </tr>
-                        </tbody>
-
-                        <!-- Saldo ajustado -->
-                        <tbody>
-                            <tr style="background:#e8f4fd;">
-                                <td style="padding:6px 8px; font-weight:bold; border:1px solid #c0d8ec;">
-                                    Saldo ajustado banco
-                                </td>
-                                <td style="padding:6px 8px; text-align:right; font-weight:bold; border:1px solid #c0d8ec;">
-                                    <span t-esc="res['saldo_ajustado_banco']"
-                                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
-                                </td>
-                            </tr>
-                        </tbody>
-
-                        <!-- Separador -->
-                        <tbody><tr><td colspan="2" style="border:none; padding:4px;"/></tr></tbody>
-
-                        <!-- Saldo libros -->
-                        <tbody>
-                            <tr style="background:#e8f4fd;">
-                                <td style="padding:6px 8px; font-weight:bold; border:1px solid #c0d8ec;">
-                                    Saldo según libros contables
-                                </td>
-                                <td style="padding:6px 8px; text-align:right; font-weight:bold; border:1px solid #c0d8ec;">
-                                    <span t-esc="res['saldo_libro']"
-                                          t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
-                                </td>
-                            </tr>
-                        </tbody>
-
-                        <!-- Diferencia -->
-                        <tbody>
-                            <tr><td colspan="2" style="border:none; padding:4px;"/></tr>
-                            <tr>
-                                <t t-if="abs(res['diferencia']) &lt; 0.01">
-                                    <td style="padding:8px; font-weight:bold; border:2px solid #1a7a1a; background:#d4edda; color:#1a7a1a; font-size:12px;">
-                                        Diferencia (Banco ajustado - Libros)
-                                    </td>
-                                    <td style="padding:8px; text-align:right; font-weight:bold; border:2px solid #1a7a1a; background:#d4edda; color:#1a7a1a; font-size:12px;">
-                                        <span t-esc="res['diferencia']"
-                                              t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
-                                        &#160; &#10003; CONCILIADO
-                                    </td>
-                                </t>
-                                <t t-else="">
-                                    <td style="padding:8px; font-weight:bold; border:2px solid #c00; background:#fde8e8; color:#c00; font-size:12px;">
-                                        Diferencia (Banco ajustado - Libros)
-                                    </td>
-                                    <td style="padding:8px; text-align:right; font-weight:bold; border:2px solid #c00; background:#fde8e8; color:#c00; font-size:12px;">
-                                        <span t-esc="res['diferencia']"
-                                              t-options="{'widget':'monetary','display_currency':current_company_id.currency_id}"/>
-                                        &#160; &#9651; DIFERENCIA
-                                    </td>
-                                </t>
-                            </tr>
-                        </tbody>
-
                     </table>
+                    <div class="row mt-4">
+                        <div class="col-6 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Elaborado por</div></div>
+                        <div class="col-6 text-center"><br/><br/><div style="border-top:1px solid black; padding-top:4px; font-size:11px;">Revisado por</div></div>
+                    </div>
                 </div>
             </t>
         </t>
