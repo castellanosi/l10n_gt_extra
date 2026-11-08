@@ -165,6 +165,36 @@ class AccountAccount(models.Model):
 class AccountMoveLine(models.Model):
     _inherit = "account.move.line"
 
+    # Conciliación bancaria (5.58): todo movimiento de banco se considera
+    # cobrado, salvo los marcados en tránsito hasta su fecha de cobro.
+    l10n_gt_en_transito = fields.Boolean(
+        string="En tránsito", copy=False, index=True,
+        help="Cheque, transferencia o depósito que el banco todavía no ha operado. "
+             "Sale como pendiente en la conciliación bancaria hasta su fecha de cobro.",
+    )
+    l10n_gt_fecha_cobro = fields.Date(
+        string="Fecha de cobro en banco", copy=False,
+        help="Día en que el banco operó el movimiento. Desde esa fecha deja de salir "
+             "pendiente en la conciliación.",
+    )
+
+    @api.constrains('l10n_gt_fecha_cobro', 'date')
+    def _check_l10n_gt_fecha_cobro(self):
+        for l in self:
+            if l.l10n_gt_fecha_cobro and l.date and l.l10n_gt_fecha_cobro < l.date:
+                raise ValidationError(
+                    'La fecha de cobro en banco ({}) no puede ser anterior a la fecha del '
+                    'movimiento {} ({}).'.format(
+                        l.l10n_gt_fecha_cobro.strftime('%d/%m/%Y'), l.move_id.name,
+                        l.date.strftime('%d/%m/%Y')))
+
+    def write(self, vals):
+        # Poner la fecha de cobro implica que estuvo en tránsito (también en la
+        # edición masiva de la lista, donde no corren los onchange).
+        if vals.get('l10n_gt_fecha_cobro') and 'l10n_gt_en_transito' not in vals:
+            vals = dict(vals, l10n_gt_en_transito=True)
+        return super().write(vals)
+
     # Son tres los lugares desde donde se llama el calculo de impuestos (que yo sepa). Por lo cual es
     # necesario, en estos tres lugares, pasar los datos para obtener la tasa.
     def _compute_totals(self):

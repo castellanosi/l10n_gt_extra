@@ -13,7 +13,7 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.57` (nov. 2026; 5.56 en producción). En producción en las 4 bases de
+- **Versión:** `18.0.5.58` (nov. 2026; 5.56 en producción, 5.57 y 5.58 se suben juntas). En producción en las 4 bases de
   SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
@@ -160,7 +160,7 @@ fuera de la lista se ignora y se usa la lógica anterior.
 - Detalle por cuenta debajo de cada renglón (casilla «Detalle por
   cuenta»). PDF horizontal salvo normal; Excel con `excel_flujo()`.
 
-### Conciliación bancaria — diseño aprobado para 5.58 (no programado)
+### Conciliación bancaria (desde 5.58)
 - Diagnóstico 07/11/2026: OCA `account_reconcile_oca` instalado en las 4
   bases; extractos solo en `conta_ic` (229 líneas, todas conciliadas) y
   `conta_gen` (8). Todos los pagos usan el método «Manual»: **no** se puede
@@ -178,8 +178,18 @@ fuera de la lista se ignora y se usa la lógica anterior.
 - Reporte: Saldo según libros + cheques en tránsito − depósitos en tránsito
   = saldo según banco (calculado); el contador **escribe** el saldo del
   estado de cuenta en el asistente (**no se guarda**) y sale la Diferencia.
-- Corregir además: pendientes de fechas anteriores al «Del» deben seguir
-  saliendo; `_saldo_libro` sin filtro de compañía.
+- Programado: campos `l10n_gt_en_transito` y `l10n_gt_fecha_cobro` en
+  `account.move.line` (poner la fecha marca en tránsito, también en edición
+  masiva, vía `write`; la fecha de cobro no puede ser anterior al
+  movimiento). Menú Contabilidad → **Movimientos en tránsito**
+  (`asset_cash`, publicados, sin línea de extracto), lista editable con
+  edición masiva, filtro por omisión «En tránsito sin cobrar». Lógica pura
+  en `report/conciliacion_logica.py` con pruebas.
+- Se quitó el campo «Del» del asistente (los pendientes no dependen de una
+  fecha inicial) y el saldo en libros filtra por compañía.
+- Empresas con extractos (OCA): los pagos quedan en «Pagos/Recibos
+  pendientes» hasta conciliar en el widget; la cuenta de banco ya refleja
+  el extracto. Su conciliación sigue siendo la del widget.
 
 ### Retenciones ISR
 Lista las facturas con el impuesto de retención ISR elegido (el que
@@ -346,7 +356,7 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 - Desde v5.54 hay `tests/` (funciones puras de `report/tipos_dte.py` y,
   desde 5.55, `agrupar_documentos()` de CxC/CxP; desde 5.56,
   `report/er_columnas.py` y `report/bg_columnas.py`; desde 5.57,
-  `report/fe_columnas.py`), con objetos simulados; no tocan la base). Se corren con
+  `report/fe_columnas.py`; desde 5.58, `report/conciliacion_logica.py`), con objetos simulados; no tocan la base). Se corren con
   `--test-enable --test-tags /l10n_gt_extra`. **No** usar
   `AccountTestInvoicingCommon`: en `tienda_odoo` falla al crear el usuario
   de prueba (algún módulo OCA rompe `res.users.create` en tests).
@@ -380,6 +390,7 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 
 | Versión | Cambio principal |
 |---|---|
+| 5.58 | Conciliación bancaria: todo cobrado salvo lo marcado en tránsito; menú «Movimientos en tránsito» con fecha de cobro; reporte libros → banco calculado → estado de cuenta → diferencia |
 | 5.57 | Estado de flujo de efectivo (método indirecto, normal / por mes / acumulativo) con comprobación; campo «Clasificación en flujo de efectivo» en la cuenta; transitorias de Odoo = efectivo |
 | 5.56 | Estado de resultados y Balance General: modos normal / por mes / acumulativo, resumen y detalle por sección; costo = cuentas 5.x |
 | 5.55 | CxC/CxP: el cheque «Solo con saldo pendiente» funciona; sin él salen también los contactos pagados (saldo 0.00) |

@@ -98,4 +98,87 @@
         </field>
     </record>
 
+    <!-- ============ CONCILIACIÓN: MOVIMIENTOS EN TRÁNSITO (5.58) ============ -->
+    <!-- Líneas de las cuentas de banco. Se marcan «En tránsito» los cheques y
+         operaciones que el banco no ha operado, y luego se les pone la fecha
+         de cobro. Varias a la vez: seleccionarlas y editar una (edición masiva). -->
+    <record id="view_move_line_transito_list" model="ir.ui.view">
+        <field name="name">account.move.line.transito.list.l10n_gt_extra</field>
+        <field name="model">account.move.line</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <list string="Movimientos en tránsito" editable="bottom" create="0" delete="0" multi_edit="1"
+                  decoration-muted="l10n_gt_fecha_cobro" decoration-warning="l10n_gt_en_transito and not l10n_gt_fecha_cobro">
+                <field name="date" readonly="1"/>
+                <field name="journal_id" readonly="1" optional="show"/>
+                <field name="account_id" readonly="1" optional="hide"/>
+                <field name="move_id" readonly="1" string="Asiento"/>
+                <field name="partner_id" readonly="1" optional="show"/>
+                <field name="ref" readonly="1" optional="show"/>
+                <field name="name" readonly="1" string="Concepto"/>
+                <field name="debit" readonly="1" string="Entrada" sum="Entradas"/>
+                <field name="credit" readonly="1" string="Salida" sum="Salidas"/>
+                <field name="company_id" column_invisible="1"/>
+                <field name="l10n_gt_en_transito" widget="boolean_toggle"/>
+                <field name="l10n_gt_fecha_cobro"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_move_line_transito_search" model="ir.ui.view">
+        <field name="name">account.move.line.transito.search.l10n_gt_extra</field>
+        <field name="model">account.move.line</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <search string="Movimientos en tránsito">
+                <field name="move_id" string="Asiento"/>
+                <field name="name" string="Concepto"/>
+                <field name="ref"/>
+                <field name="partner_id"/>
+                <field name="journal_id"/>
+                <field name="account_id"/>
+                <field name="debit" string="Entrada"/>
+                <field name="credit" string="Salida"/>
+                <filter name="pendientes" string="En tránsito sin cobrar"
+                        domain="[('l10n_gt_en_transito', '=', True), ('l10n_gt_fecha_cobro', '=', False)]"/>
+                <filter name="cobrados" string="Cobrados por el banco"
+                        domain="[('l10n_gt_en_transito', '=', True), ('l10n_gt_fecha_cobro', '!=', False)]"/>
+                <filter name="sin_marca" string="Sin marcar"
+                        domain="[('l10n_gt_en_transito', '=', False)]"/>
+                <separator/>
+                <filter name="salidas" string="Salidas (cheques, débitos)" domain="[('credit', '&gt;', 0)]"/>
+                <filter name="entradas" string="Entradas (depósitos, créditos)" domain="[('debit', '&gt;', 0)]"/>
+                <separator/>
+                <filter name="fecha" string="Fecha" date="date"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="agrupar_cuenta" string="Cuenta" context="{'group_by': 'account_id'}"/>
+                    <filter name="agrupar_diario" string="Diario" context="{'group_by': 'journal_id'}"/>
+                    <filter name="agrupar_mes" string="Mes" context="{'group_by': 'date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_move_line_transito" model="ir.actions.act_window">
+        <field name="name">Movimientos en tránsito</field>
+        <field name="res_model">account.move.line</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_move_line_transito_list"/>
+        <field name="search_view_id" ref="view_move_line_transito_search"/>
+        <field name="domain">[('account_id.account_type', '=', 'asset_cash'), ('parent_state', '=', 'posted'), ('move_id.statement_line_id', '=', False)]</field>
+        <field name="context">{'search_default_pendientes': 1, 'search_default_agrupar_cuenta': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No hay movimientos en tránsito</p>
+            <p>Quite el filtro «En tránsito sin cobrar» para ver todos los movimientos de banco,
+               busque el cheque y active «En tránsito». Cuando el banco lo cobre, ponga la
+               fecha de cobro. Para varios a la vez, selecciónelos y edite uno.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_move_line_transito"
+              name="Movimientos en tránsito"
+              action="action_move_line_transito"
+              parent="account.menu_finance_entries"
+              sequence="90"/>
+
 </odoo>

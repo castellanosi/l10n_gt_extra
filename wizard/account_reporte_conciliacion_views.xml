@@ -10,8 +10,7 @@
                 <group>
                     <group>
                         <field name="folio_inicial"/>
-                    <field name="cuenta_id"/>
-                        <field name="fecha_desde"/>
+                        <field name="cuenta_id"/>
                         <field name="fecha_hasta"/>
                         <field name="saldo_banco"/>
                     </group>
@@ -20,6 +19,11 @@
                         <field name="archivo" readonly="1" filename="name"/>
                     </group>
                 </group>
+                <div class="alert alert-info mb-2" role="status">
+                    Todo movimiento de banco se considera cobrado, salvo los marcados «En tránsito»
+                    (Contabilidad → Movimientos en tránsito) hasta su fecha de cobro.
+                    Escriba el saldo del estado de cuenta: la Diferencia debe ser 0.00.
+                </div>
                 <footer>
                     <button name="preview_report" string="&#x1F441; Previsualizar" type="object" class="btn-secondary"/>
 
