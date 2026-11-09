@@ -12,7 +12,7 @@ Cada documento es un dict con:
 """
 
 # Motivos (se muestran tal cual al usuario)
-M_DISTINTOS = 'Mismo DTE con distinto cliente/proveedor o total'
+M_DISTINTOS = 'Mismo DTE con distinto NIT o total'
 M_VARIOS_PAGOS = 'Más de una copia tiene pagos'
 M_PAGOS = 'Tiene pagos o conciliación'
 M_HASH = 'Asiento inalterable (hash)'
@@ -79,8 +79,10 @@ def clasificar(docs):
         res['grupos'] += 1
         ids = sorted(d['id'] for d in grupo)
 
-        # Las copias deben ser iguales en contraparte y total.
-        if len({d['partner_id'] for d in grupo}) > 1 or len({round(d['total'] or 0.0, 2) for d in grupo}) > 1:
+        # Las copias deben ser iguales en NIT y total. Se compara el NIT y no el
+        # contacto: una carga doble puede crear dos contactos con el mismo NIT
+        # (conta_gen, 350 pares, 09/11/2026).
+        if len({_txt(d.get('nit')) for d in grupo}) > 1 or len({round(d['total'] or 0.0, 2) for d in grupo}) > 1:
             res['revisar'].append((ids, M_DISTINTOS))
             continue
         if sum(1 for d in grupo if d['con_pagos']) > 1:
