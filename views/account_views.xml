@@ -114,13 +114,13 @@
                 <field name="account_id" readonly="1" optional="hide"/>
                 <field name="move_id" readonly="1" string="Asiento"/>
                 <field name="partner_id" readonly="1" optional="show"/>
-                <field name="ref" readonly="1" optional="show"/>
+                <field name="ref" readonly="1" optional="hide"/>
                 <field name="name" readonly="1" string="Concepto"/>
                 <field name="debit" readonly="1" string="Entrada" sum="Entradas"/>
                 <field name="credit" readonly="1" string="Salida" sum="Salidas"/>
                 <field name="company_id" column_invisible="1"/>
                 <field name="l10n_gt_en_transito" widget="boolean_toggle"/>
-                <field name="l10n_gt_fecha_cobro"/>
+                <field name="l10n_gt_fecha_cobro" string="Cobro en banco"/>
             </list>
         </field>
     </record>
