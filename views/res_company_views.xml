@@ -9,6 +9,9 @@
             <div name="button_box" position="inside">
                 <button name="update_gt_taxes" string="Agregar Impuestos GT" type="object"/>
             </div>
+            <field name="vat" position="after">
+                <field name="l10n_gt_cui" placeholder="Opcional, 13 dígitos"/>
+            </field>
         </field>
     </record>
 

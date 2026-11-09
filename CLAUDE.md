@@ -13,7 +13,7 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.58` (nov. 2026; 5.56 en producción, 5.57 y 5.58 se suben juntas). En producción en las 4 bases de
+- **Versión:** `18.0.5.59` (nov. 2026; 5.57 y 5.58 en producción desde 08/11/2026). En producción en las 4 bases de
   SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
@@ -191,6 +191,32 @@ fuera de la lista se ignora y se usa la lógica anterior.
   pendientes» hasta conciliar en el widget; la cuenta de banco ya refleja
   el extracto. Su conciliación sigue siendo la del widget.
 
+### Depurar documentos duplicados (desde 5.59)
+- Origen: en `conta_gen` (BH Inversión) la hoja de ventas de la SAT se
+  importó dos veces (23/10/2026): 8,989 ventas publicadas, 4,126 pares,
+  sin pagos. Evitar la doble carga es tarea del **importador** (otro repo).
+- Contabilidad → Asientos → **Depurar documentos duplicados** (solo
+  `group_account_manager`). Analizar → Eliminar duplicados (lotes de 500
+  por clic, commit cada 100, se repite hasta 0) → **Renumerar por fecha**
+  (abre el `account.resequence.wizard` nativo con `ordering = date`; exige
+  un solo diario).
+- Clave: compañía + `move_type` + UUID (`firma_fel` o `l10n_gt_fel_uuid`);
+  sin UUID, serie + número + NIT. Se conserva la copia con pagos, si no la
+  publicada de `id` más bajo. **Nunca se borra** con pagos, hash, fecha
+  bloqueada, ni si las copias difieren en contraparte o total (sale «a
+  revisar»). La importación por hoja también llena `firma_fel`.
+- Borrado: `button_draft()`, `name = '/'` (Odoo permite borrar así lo que
+  no es el final de la secuencia) y `unlink()` con `force_delete`, cada uno
+  en su savepoint; el fallo se informa por documento. Nota en el chatter
+  de la copia conservada. Lógica pura en `wizard/duplicados_logica.py`.
+- Renumerar cambia solo el correlativo interno `INV/…`; serie y número
+  FEL no cambian. Avisar al contador por si anotó números `INV/…`.
+
+### CUI de la empresa (desde 5.59)
+- `res.company.l10n_gt_cui`, opcional, debajo del NIT. Se guarda sin
+  espacios ni guiones; si se llena, 13 dígitos. Lo lee `gt_xml_importer`
+  con `'l10n_gt_cui' in company._fields` para aceptar DTE facturados al CUI.
+
 ### Retenciones ISR
 Lista las facturas con el impuesto de retención ISR elegido (el que
 agrega el botón «Retención ISR»). Se conserva: lo necesitan los agentes
@@ -356,7 +382,7 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 - Desde v5.54 hay `tests/` (funciones puras de `report/tipos_dte.py` y,
   desde 5.55, `agrupar_documentos()` de CxC/CxP; desde 5.56,
   `report/er_columnas.py` y `report/bg_columnas.py`; desde 5.57,
-  `report/fe_columnas.py`; desde 5.58, `report/conciliacion_logica.py`), con objetos simulados; no tocan la base). Se corren con
+  `report/fe_columnas.py`; desde 5.58, `report/conciliacion_logica.py`; desde 5.59, `wizard/duplicados_logica.py` y el CUI), con objetos simulados; no tocan la base). Se corren con
   `--test-enable --test-tags /l10n_gt_extra`. **No** usar
   `AccountTestInvoicingCommon`: en `tienda_odoo` falla al crear el usuario
   de prueba (algún módulo OCA rompe `res.users.create` en tests).
@@ -390,6 +416,7 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 
 | Versión | Cambio principal |
 |---|---|
+| 5.59 | Asistente «Depurar documentos duplicados» (UUID / serie-número, por lotes, excepciones, enlace a renumerar por fecha); CUI de la empresa; lista de movimientos en tránsito: «Cobro en banco», Referencia oculta |
 | 5.58 | Conciliación bancaria: todo cobrado salvo lo marcado en tránsito; menú «Movimientos en tránsito» con fecha de cobro; reporte libros → banco calculado → estado de cuenta → diferencia |
 | 5.57 | Estado de flujo de efectivo (método indirecto, normal / por mes / acumulativo) con comprobación; campo «Clasificación en flujo de efectivo» en la cuenta; transitorias de Odoo = efectivo |
 | 5.56 | Estado de resultados y Balance General: modos normal / por mes / acumulativo, resumen y detalle por sección; costo = cuentas 5.x |
