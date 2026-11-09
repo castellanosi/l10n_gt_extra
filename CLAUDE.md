@@ -13,7 +13,7 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.59` (nov. 2026; 5.57 y 5.58 en producción desde 08/11/2026). En producción en las 4 bases de
+- **Versión:** `18.0.5.60` (nov. 2026; 5.59 en producción desde 09/11/2026). En producción en las 4 bases de
   SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
@@ -203,7 +203,7 @@ fuera de la lista se ignora y se usa la lógica anterior.
 - Clave: compañía + `move_type` + UUID (`firma_fel` o `l10n_gt_fel_uuid`);
   sin UUID, serie + número + NIT. Se conserva la copia con pagos, si no la
   publicada de `id` más bajo. **Nunca se borra** con pagos, hash, fecha
-  bloqueada, ni si las copias difieren en contraparte o total (sale «a
+  bloqueada, ni si las copias difieren en NIT o total (sale «a
   revisar»). La importación por hoja también llena `firma_fel`.
 - Borrado: `button_draft()`, `name = '/'` (Odoo permite borrar así lo que
   no es el final de la secuencia) y `unlink()` con `force_delete`, cada uno
@@ -211,6 +211,9 @@ fuera de la lista se ignora y se usa la lógica anterior.
   de la copia conservada. Lógica pura en `wizard/duplicados_logica.py`.
 - Renumerar cambia solo el correlativo interno `INV/…`; serie y número
   FEL no cambian. Avisar al contador por si anotó números `INV/…`.
+- **Se compara el NIT, no el contacto** (5.60): en `conta_gen` la doble carga
+  creó dos contactos con el mismo NIT y nombre; 350 pares quedaban «a
+  revisar» en 5.59. Los contactos repetidos se fusionan aparte.
 
 ### CUI de la empresa (desde 5.59)
 - `res.company.l10n_gt_cui`, opcional, debajo del NIT. Se guarda sin
@@ -416,6 +419,7 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 
 | Versión | Cambio principal |
 |---|---|
+| 5.60 | Depurar duplicados: compara el NIT y no el contacto (contactos repetidos por la doble carga) |
 | 5.59 | Asistente «Depurar documentos duplicados» (UUID / serie-número, por lotes, excepciones, enlace a renumerar por fecha); CUI de la empresa; lista de movimientos en tránsito: «Cobro en banco», Referencia oculta |
 | 5.58 | Conciliación bancaria: todo cobrado salvo lo marcado en tránsito; menú «Movimientos en tránsito» con fecha de cobro; reporte libros → banco calculado → estado de cuenta → diferencia |
 | 5.57 | Estado de flujo de efectivo (método indirecto, normal / por mes / acumulativo) con comprobación; campo «Clasificación en flujo de efectivo» en la cuenta; transitorias de Odoo = efectivo |
