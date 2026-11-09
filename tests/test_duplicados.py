@@ -57,9 +57,14 @@ class TestDuplicados(TransactionCase):
         self.assertEqual(res['borrar'], [])
         self.assertEqual(res['revisar'], [([1, 2], dl.M_VARIOS_PAGOS)])
 
-    def test_distinto_total_o_cliente_se_revisa(self):
+    def test_distinto_total_o_nit_se_revisa(self):
         self.assertEqual(dl.clasificar([doc(1), doc(2, total=11.0)])['revisar'][0][1], dl.M_DISTINTOS)
-        self.assertEqual(dl.clasificar([doc(1), doc(2, partner=2)])['revisar'][0][1], dl.M_DISTINTOS)
+        self.assertEqual(dl.clasificar([doc(1), doc(2, nit='999')])['revisar'][0][1], dl.M_DISTINTOS)
+
+    def test_otro_contacto_con_mismo_nit_es_duplicado(self):
+        res = dl.clasificar([doc(1, partner=202, nit='3950-4700'), doc(2, partner=521, nit='39504700')])
+        self.assertEqual(res['conservar'], [1])
+        self.assertEqual(res['borrar'], [2])
 
     def test_hash_y_bloqueo_no_se_borran(self):
         res = dl.clasificar([doc(1), doc(2, hash_=True), doc(3, bloqueado=True)])

@@ -25,7 +25,7 @@
                     <ul class="mb-0">
                         <li>un documento con pagos, conciliación o nota de crédito aplicada;</li>
                         <li>un grupo donde más de una copia tiene pagos;</li>
-                        <li>un grupo cuyas copias difieren en cliente/proveedor o total;</li>
+                        <li>un grupo cuyas copias difieren en NIT del cliente/proveedor o en total;</li>
                         <li>un asiento inalterable (hash) o con fecha dentro del período bloqueado;</li>
                         <li>documentos sin UUID ni serie-número (no se pueden comparar).</li>
                     </ul>
