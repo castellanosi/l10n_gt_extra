@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============ DEPURAR DOCUMENTOS DUPLICADOS (5.59) ============ -->
+    <record id="depurar_duplicados_wizard_view_form" model="ir.ui.view">
+        <field name="name">l10n_gt_extra.depurar_duplicados.wizard</field>
+        <field name="model">l10n_gt_extra.depurar_duplicados.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Depurar documentos duplicados">
+                <div class="alert alert-info mb-2" role="status">
+                    <p class="mb-1"><b>Procedimiento</b></p>
+                    <ol class="mb-2">
+                        <li><b>Analizar:</b> busca documentos del mismo tipo con el mismo DTE
+                            (número de autorización UUID; si no tiene, serie + número + NIT).
+                            No cambia nada.</li>
+                        <li><b>Eliminar duplicados:</b> de cada DTE repetido conserva una copia y elimina
+                            las demás, por lotes. Repita el botón hasta que no quede ninguna.
+                            En el historial de la copia que se conserva queda una nota.</li>
+                        <li><b>Renumerar por fecha:</b> abre el asistente de Odoo con «Reordenar por fecha
+                            contable», para que el correlativo interno siga el orden de las fechas.</li>
+                    </ol>
+                    <p class="mb-1"><b>Cuál se conserva:</b> la copia con pagos; si ninguna tiene, la
+                        publicada más antigua.</p>
+                    <p class="mb-1"><b>Nunca se elimina</b> (sale en «A revisar a mano»):</p>
+                    <ul class="mb-0">
+                        <li>un documento con pagos, conciliación o nota de crédito aplicada;</li>
+                        <li>un grupo donde más de una copia tiene pagos;</li>
+                        <li>un grupo cuyas copias difieren en cliente/proveedor o total;</li>
+                        <li>un asiento inalterable (hash) o con fecha dentro del período bloqueado;</li>
+                        <li>documentos sin UUID ni serie-número (no se pueden comparar).</li>
+                    </ul>
+                </div>
+                <div class="alert alert-warning mb-2" role="alert">
+                    Eliminar no se puede deshacer. Haga antes un respaldo de la base.
+                </div>
+                <group>
+                    <group>
+                        <field name="company_id"/>
+                        <field name="tipo"/>
+                        <field name="diario_id" options="{'no_create': True}"/>
+                    </group>
+                    <group>
+                        <field name="fecha_desde"/>
+                        <field name="fecha_hasta"/>
+                        <field name="lote"/>
+                    </group>
+                </group>
+                <field name="analizado" invisible="1"/>
+                <field name="num_borrar" invisible="1"/>
+                <field name="eliminadas" invisible="1"/>
+                <field name="resumen" nolabel="1" invisible="not analizado"/>
+                <footer>
+                    <button name="action_analizar" string="Analizar" type="object" class="oe_highlight"/>
+                    <button name="action_eliminar" string="Eliminar duplicados" type="object"
+                            class="btn-danger" invisible="not analizado or num_borrar == 0"
+                            confirm="Se eliminarán las copias duplicadas del lote. Esta acción no se puede deshacer. ¿Continuar?"/>
+                    <button name="action_renumerar" string="Renumerar por fecha" type="object"
+                            class="btn-secondary" invisible="not analizado or num_borrar != 0"/>
+                    <button special="cancel" string="Cerrar" class="oe_link"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="depurar_duplicados_wizard_action" model="ir.actions.act_window">
+        <field name="name">Depurar documentos duplicados</field>
+        <field name="res_model">l10n_gt_extra.depurar_duplicados.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="depurar_duplicados_wizard_menu"
+              name="Depurar documentos duplicados"
+              action="depurar_duplicados_wizard_action"
+              parent="account.menu_finance_entries"
+              groups="account.group_account_manager"
+              sequence="91"/>
+
+</odoo>
