@@ -194,7 +194,12 @@ class AsistenteDepurarDuplicados(models.TransientModel):
                 move.write({'name': '/'})
                 move.with_context(force_delete=True).unlink()
             if conservada:
-                conservada.message_post(body=_('Se eliminó la copia duplicada %s (id %s).') % (nombre, move.id))
+                try:
+                    # _message_log no envía correo ni exige correo del remitente
+                    # (message_post falló en producción por eso, 09/11/2026).
+                    conservada._message_log(body=_('Se eliminó la copia duplicada %s (id %s).') % (nombre, move.id))
+                except Exception:  # noqa: BLE001 - la nota nunca debe contar como fallo
+                    _logger.warning('Depurar duplicados: no se pudo anotar en id %s', conservada.id)
             _logger.info('Depurar duplicados: eliminada %s (id %s), se conserva id %s',
                          nombre, move.id, conservada.id if conservada else '-')
             return None
