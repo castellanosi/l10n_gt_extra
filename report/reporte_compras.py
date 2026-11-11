@@ -13,6 +13,11 @@ from .tipos_dte import (
     sin_credito_fiscal,
 )
 
+
+# El libro de compras va por la fecha de la factura (fecha del DTE), no por la
+# fecha contable: una factura del 30/10 contabilizada el 31/10 sale el 30/10.
+CAMPO_FECHA_LIBRO_COMPRAS = 'invoice_date'
+
 class ReporteCompras(models.AbstractModel):
     _name = 'report.l10n_gt_extra.reporte_compras'
     _description = 'Libro de Compras'
@@ -31,8 +36,9 @@ class ReporteCompras(models.AbstractModel):
         filtro = [
             ('state','in',['posted','cancel']),
             ('journal_id','in',journal_ids),
-            ('date','<=',datos['fecha_hasta']),
-            ('date','>=',datos['fecha_desde']),
+            # Fecha del documento (fecha de la factura), no la contable (5.62)
+            (CAMPO_FECHA_LIBRO_COMPRAS,'<=',datos['fecha_hasta']),
+            (CAMPO_FECHA_LIBRO_COMPRAS,'>=',datos['fecha_desde']),
             ('amount_total','!=',0),
         ]
         
