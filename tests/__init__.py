@@ -5,3 +5,4 @@ from . import test_estado_resultados
 from . import test_flujo_efectivo
 from . import test_conciliacion
 from . import test_duplicados
+from . import test_retencion

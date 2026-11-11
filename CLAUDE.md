@@ -13,7 +13,7 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.61` (nov. 2026; 5.60 en producción desde 09/11/2026). En producción en las 4 bases de
+- **Versión:** `18.0.5.62` (nov. 2026; 5.60 en producción desde 09/11/2026). En producción en las 4 bases de
   SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
@@ -71,6 +71,10 @@ fuera de la lista se ignora y se usa la lógica anterior.
 ## 2. Estado actual de los reportes (v5.50)
 
 ### Libros de ventas y compras
+- **Libro de compras por fecha de la factura** (`invoice_date`, desde
+  5.62; antes por fecha contable `date`). Decisión del usuario: una factura
+  del 30/10 contabilizada el 31/10 sale el 30/10. Ventas no cambia (en
+  ventas ambas fechas coinciden).
 - **Tipo:** el código de DTE (`FPEQ`, `NCRE`…) si la factura lo tiene;
   si no, la lógica anterior (`FACT`/`NC`/`ND`). Hay dos variables:
   `tipo` (interna, decide el signo de las NC) y `tipo_mostrar` (lo que
@@ -223,10 +227,44 @@ fuera de la lista se ignora y se usa la lógica anterior.
   espacios ni guiones; si se llena, 13 dígitos. Lo lee `gt_xml_importer`
   con `'l10n_gt_cui' in company._fields` para aceptar DTE facturados al CUI.
 
-### Retenciones ISR
-Lista las facturas con el impuesto de retención ISR elegido (el que
-agrega el botón «Retención ISR»). Se conserva: lo necesitan los agentes
-de retención del régimen general. Muestra serie-número y tipo de DTE.
+### Retenciones de IVA e ISR (desde 5.62: como pago)
+**Decisión del usuario (09/11/2026):** la retención es parte del pago, no
+de la factura. Se quitó todo el mecanismo de impuestos de fórmula.
+
+- Botón **«Retención»** en facturas de cliente y de proveedor publicadas
+  con saldo. **Siempre visible, sin importar el régimen** (decisión del
+  usuario: hay casos en que hace falta retener aunque la regla diga que no).
+- Asistente `l10n_gt_extra.registrar_retencion.wizard`: **solo** diario de
+  retención (salen todos los diarios marcados; si hay uno, se elige solo),
+  cuenta (solo lectura), monto, fecha y número de constancia. **El monto
+  lo escribe el usuario** (el de la constancia): sin tipo, cálculo ni
+  porcentaje (decisión del usuario, 10/11/2026; un primer borrador con
+  cálculo sugerido se descartó). El tipo IVA/ISR sale del diario
+  (`l10n_gt_retencion`) y solo se usa en el texto del pago y en el aviso
+  de factura menor de Q2,500. Crea un **pago parcial** con
+  `account.payment.register` (`payment_difference_handling='open'`) y lo
+  concilia con la factura. No pasa la factura a borrador ni toca el DTE.
+- **Diarios:** campo `account.journal.l10n_gt_retencion` (`iva`/`isr`),
+  pestaña Extra, solo banco/efectivo. Un diario por tipo sirve para
+  ventas y compras: la cuenta sale del método de pago — **Pagos
+  entrantes** = retenciones que le hacen (activo, 1.1.03.02 / 1.1.03.03),
+  **Pagos salientes** = retenciones que usted hace (pasivo, p. ej.
+  2.1.02.05). Sin cuenta, el asistente lo dice y no registra (Odoo 18
+  registraría sin asiento). La **cuenta de efectivo** que Odoo exige al
+  diario es una cuenta puente tipo «Banco y efectivo» que queda siempre en
+  cero (en `tienda_odoo`: 1.0.02.02 «Puente diarios de retención»).
+- La constancia se agrega a `numero_retencion` (separadas por coma).
+- Factura menor de Q2,500 con diario de IVA: solo aviso, no bloquea.
+- La migración 5.62 archiva los impuestos «IVA/ISR Retención Global»
+  (compras y ventas) y marca los diarios llamados «Retención IVA/ISR…».
+  Se quitaron de `data/template/account.tax-gt.csv`, que los volvía a
+  crear con `-0.80` en cada empresa nueva (por eso la corrección de 5.44
+  nunca duraba; el `hooks.py`, que además buscaba el nombre sin tilde y
+  ni siquiera estaba en el manifest, se eliminó).
+- **Se eliminó el reporte «Retenciones ISR»** (5.62, decisión del
+  usuario). No restaurar.
+- «ISR Retención» (impuesto por línea, `base / 1.12`) sigue en la
+  plantilla: no lo usaban los botones. Pendiente decidir si se archiva.
 
 ### Cuentas por cobrar y por pagar
 - **Antigüedad por documento:** cada factura/NC/pago sin aplicar con su
@@ -256,12 +294,21 @@ de retención del régimen general. Muestra serie-número y tipo de DTE.
   factura del proveedor) o el correlativo. Pagos: referencia bancaria.
 - **Concepto:** correlativo de Odoo primero (para buscarlo) · tipo de
   documento · descripción corta.
-- Sub-filas de retenciones bajo cada factura; `amount_total` ya es
-  post-retención → bruto = neto CxC + Σ retenciones.
+- **Fecha del documento (5.62):** facturas por `invoice_date`, pagos y
+  asientos por `date` (`FECHA_DOCUMENTO_SQL`), también en el saldo
+  anterior.
+- **Retenciones desde 5.62:** son pagos del diario de retención, así que
+  salen como **filas de pago** que bajan el saldo (documento = memo
+  «Retención IVA · constancia N · factura»). No requirió cambios en el
+  reporte.
+- Facturas anteriores a 5.62 con línea de retención: siguen saliendo con
+  sub-filas bajo la factura; `amount_total` ya es post-retención →
+  bruto = neto CxC + Σ retenciones. No quitar esa lógica (histórico).
 
 ### Encabezado, folio y formato (13 reportes)
 Ventas, compras, diario, mayor, balanza, estado de resultados, balance
-general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
+general, CxC, CxP, estado de cuenta, conciliación (retenciones ISR se
+eliminó en 5.62).
 
 - Plantillas comunes en `report/report_views.xml`:
   - `l10n_gt_extra.encabezado_folio`: `div.header` repetido en cada
@@ -311,7 +358,11 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 - `Char(translate=True)` se guarda como `jsonb` → en SQL `campo::text`,
   y al leer desde SQL crudo, convertir el dict (`_to_str`, `_jsonb_str`).
 - Asientos publicados bloquean el ORM → `button_draft()` antes de editar.
-- Reportes eliminados en v5.45: no restaurar.
+- Reportes eliminados en v5.45 y Retenciones ISR (5.62): no restaurar.
+- **Retenciones: nunca volver a impuestos de fórmula** (`amount_type='code'`
+  con `quantity` = total en una línea de precio 0). Dieron montos
+  equivocados (-0.80 en vez de -0.15), cuentas vacías en compras y
+  modificaban facturas con DTE. Desde 5.62 son pagos.
 - `ir.actions.report` → tabla `ir_act_report_xml`;
   `ir.actions.act_window` → tabla `ir_act_window`.
 - Conciliación bancaria: `account_bank_statement_line.is_reconciled`
@@ -422,6 +473,7 @@ general, CxC, CxP, estado de cuenta, conciliación, retenciones ISR.
 
 | Versión | Cambio principal |
 |---|---|
+| 5.62 | Retenciones IVA/ISR como pago parcial (botón «Retención» + asistente con diario y monto manual, cuenta del método de pago); libro de compras y estado de cuenta por fecha de la factura; fuera impuestos de fórmula «Retención Global», `hooks.py` y reporte Retenciones ISR |
 | 5.61 | Depurar duplicados: nota con `_message_log` (no exige correo del remitente) |
 | 5.60 | Depurar duplicados: compara el NIT y no el contacto (contactos repetidos por la doble carga) |
 | 5.59 | Asistente «Depurar documentos duplicados» (UUID / serie-número, por lotes, excepciones, enlace a renumerar por fecha); CUI de la empresa; lista de movimientos en tránsito: «Cobro en banco», Referencia oculta |

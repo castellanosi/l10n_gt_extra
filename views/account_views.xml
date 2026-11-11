@@ -7,8 +7,9 @@
         <field name="inherit_id" ref="account.view_move_form"/>
         <field name="arch" type="xml">
             <button name="button_draft" position="after">
-                <button name="agregar_linea_impuesto_global" context="{'tipo_impuesto': 'isr', 'nombre_linea': 'Retención ISR'}" id="agregar_linea_isr" string="Retención ISR" type="object"/>
-                <button name="agregar_linea_impuesto_global" context="{'tipo_impuesto': 'iva', 'nombre_linea': 'Retención IVA'}" id="agregar_linea_iva" string="Retención IVA" type="object"/>
+                <button name="action_registrar_retencion" id="registrar_retencion" string="Retención" type="object"
+                        invisible="state != 'posted' or move_type not in ('out_invoice', 'in_invoice') or payment_state in ('paid', 'in_payment', 'reversed')"
+                        groups="account.group_account_invoice"/>
             </button>
             <field name="fiscal_position_id" position="after">
                 <field name="tipo_gasto"/>
@@ -57,6 +58,7 @@
                         <group>
                             <field name="facturas_por_rangos" invisible="type not in ['sale']"/>
                             <field name="usar_referencia" invisible="type not in ['sale']"/>
+                            <field name="l10n_gt_retencion" invisible="type not in ['bank', 'cash']"/>
                         </group>
                     </group>
                 </page>
