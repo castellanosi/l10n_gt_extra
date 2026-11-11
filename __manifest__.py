@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 {
     'name': 'Guatemala - reportes y funcionalidad extra',
-    'version': '18.0.5.61',
+    'version': '18.0.5.62',
     'category': 'Accounting/Localizations/Reporting',
     'description': """
         Reportes requeridos por la SAT y otra funcionalidad extra para llevar
@@ -15,7 +15,7 @@
         - Libro Mayor
         - Reporte de Inventario
         - Reporte de Partidas
-        - ISR Retenciones
+        - Retenciones de IVA e ISR registradas como pago
         - Balanza de Comprobación (Balance de Saldos)
         - Estado de Cuenta por Cliente / Proveedor
         - Facturas Electrónicas FEL
@@ -44,7 +44,6 @@
         'report/reporte_mayor_views.xml',
 
         # Reportes nuevos
-        'report/reporte_isr_views.xml',
         'report/reporte_balance_saldos_views.xml',
         'report/reporte_estado_cuenta_views.xml',
         'report/reporte_conciliacion_views.xml',
@@ -59,13 +58,13 @@
         'wizard/account_journal_reporte_ventas_views.xml',
 
         # Wizards nuevos
-        'wizard/account_reporte_isr_views.xml',
         'wizard/account_reporte_balance_saldos_views.xml',
         'wizard/account_reporte_estado_cuenta_views.xml',
         'wizard/account_reporte_conciliacion_views.xml',
         'wizard/account_reporte_financiero_views.xml',
         'wizard/account_reporte_cuentas_cobrar_pagar_views.xml',
         'wizard/account_depurar_duplicados_views.xml',
+        'wizard/registrar_retencion_views.xml',
 
         'security/ir.model.access.csv',
     ],

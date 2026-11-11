@@ -5,6 +5,10 @@ from odoo import api, models
 from .reporte_cuentas_cobrar_pagar import NIT_NO_AGRUPABLES, nit_normalizado
 from .tipos_dte import TIPOS_DTE, campos_tipo_dte, codigo_dte
 
+# Facturas por la fecha del documento (fecha de la factura); pagos y asientos
+# sin fecha de factura, por la fecha contable (5.62).
+FECHA_DOCUMENTO_SQL = 'COALESCE(m.invoice_date, l.date)'
+
 NOMBRE_TIPO = {
     'out_invoice': 'Factura',
     'out_refund': 'Nota de crédito',
@@ -58,8 +62,9 @@ class ReporteEstadoCuenta(models.AbstractModel):
             "SELECT COALESCE(SUM(l.debit) - SUM(l.credit), 0) AS saldo "
             "FROM account_move_line l "
             "JOIN account_account a ON l.account_id = a.id "
+            "JOIN account_move m ON l.move_id = m.id "
             "WHERE l.partner_id IN %s AND l.parent_state = 'posted' "
-            "AND l.date < %s AND l.company_id = %s "
+            "AND " + FECHA_DOCUMENTO_SQL + " < %s AND l.company_id = %s "
             "AND a.account_type IN ('asset_receivable','liability_payable')",
             (partner_ids, datos['fecha_desde'], self.env.company.id)
         )
@@ -141,7 +146,7 @@ class ReporteEstadoCuenta(models.AbstractModel):
         INVOICE_TYPES = TIPOS_DEBE + TIPOS_HABER
 
         self.env.cr.execute("""
-            SELECT l.id, l.date, l.debit, l.credit,
+            SELECT l.id, """ + FECHA_DOCUMENTO_SQL + """ AS date, l.debit, l.credit,
                    m.name AS documento, m.move_type,
                    l.ref, l.name AS linea_name,
                    m.payment_reference, m.id AS move_id,
@@ -155,11 +160,11 @@ class ReporteEstadoCuenta(models.AbstractModel):
             LEFT JOIN account_bank_statement_line bsl ON bsl.move_id = m.id
             WHERE l.partner_id   IN %s
               AND l.parent_state = 'posted'
-              AND l.date        >= %s
-              AND l.date        <= %s
+              AND """ + FECHA_DOCUMENTO_SQL + """ >= %s
+              AND """ + FECHA_DOCUMENTO_SQL + """ <= %s
               AND l.company_id  = %s
               AND a.account_type IN ('asset_receivable','liability_payable')
-            ORDER BY l.date, m.name
+            ORDER BY """ + FECHA_DOCUMENTO_SQL + """, m.name
         """, (partner_ids, datos['fecha_desde'], datos['fecha_hasta'], company_id))
 
         rows    = self.env.cr.dictfetchall()
