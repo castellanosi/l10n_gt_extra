@@ -9,6 +9,7 @@ from .tipos_dte import (
     campo_afiliacion,
     campos_tipo_dte,
     codigo_dte,
+    columna_linea,
     es_pequenio,
     sin_credito_fiscal,
 )
@@ -54,6 +55,8 @@ class ReporteCompras(models.AbstractModel):
         # periodo anterior a un cambio de régimen. Sin dato: GEN (como antes).
         regimen_comprador = datos.get('regimen_comprador') or 'GEN'
         tiene_fel_state = 'l10n_gt_fel_state' in campos_move
+        # gt_bien_servicio (gt_xml_importer): B/S en líneas sin producto de un DTE mezclado
+        tiene_bien_servicio = 'gt_bien_servicio' in self.env['account.move.line']._fields
 
         if tiene_type:
             filtro.append(('type','in',['in_invoice','in_refund']))
@@ -162,12 +165,11 @@ class ReporteCompras(models.AbstractModel):
                 if es_nc:
                     precio = precio * -1
 
-                tipo_linea = f.tipo_gasto or 'mixto'
-                if tipo_linea == 'mixto':
-                    if l.product_id.type != 'service':
-                        tipo_linea = 'compra'
-                    else:
-                        tipo_linea = 'servicio'
+                tipo_linea = columna_linea(
+                    f.tipo_gasto,
+                    l.product_id.type,
+                    l.gt_bien_servicio if tiene_bien_servicio else False,
+                )
 
                 if peq:
                     tipo_linea = 'pequeño'
