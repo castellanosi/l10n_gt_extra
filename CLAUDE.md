@@ -13,7 +13,7 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.62` (nov. 2026; 5.60 en producción desde 09/11/2026). En producción en las 4 bases de
+- **Versión:** `18.0.5.63` (nov. 2026; 5.60 en producción desde 09/11/2026). En producción en las 4 bases de
   SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
@@ -88,6 +88,12 @@ fuera de la lista se ignora y se usa la lógica anterior.
 - **Gravado/exento:** depende del impuesto elegido en el asistente. Para
   pequeño contribuyente se usa un impuesto «PEQ» de 0 %; seleccionando
   PEQ salen en «VENT.» con IVA 0. Aprobado por el usuario; no cambiar.
+- **Columna Bienes/Servicios (5.63):** la decide `columna_linea()` en
+  `report/tipos_dte.py`. Con `tipo_gasto` fijo manda la factura. Con
+  `mixto`: si la línea tiene producto, manda el tipo del producto; si no
+  tiene producto y trae `gt_bien_servicio` (`B`/`S`, de `gt_xml_importer`),
+  manda ese campo; si no, Bienes (como antes). El campo se detecta una vez
+  con `_fields`: sin el importador el resultado es idéntico a 5.62.
 - Precálculo: campos opcionales, conjunto de ids de impuestos y tasa de
   cambio por compañía. Medido: 0.94 s → 0.05 s con 12 facturas.
 
@@ -473,6 +479,7 @@ eliminó en 5.62).
 
 | Versión | Cambio principal |
 |---|---|
+| 5.63 | Libros de compras y ventas: en facturas `mixto`, las líneas sin producto usan `gt_bien_servicio` (B/S) del importador XML para ir a Bienes o Servicios |
 | 5.62 | Retenciones IVA/ISR como pago parcial (botón «Retención» + asistente con diario y monto manual, cuenta del método de pago); libro de compras y estado de cuenta por fecha de la factura; fuera impuestos de fórmula «Retención Global», `hooks.py` y reporte Retenciones ISR |
 | 5.61 | Depurar duplicados: nota con `_message_log` (no exige correo del remitente) |
 | 5.60 | Depurar duplicados: compara el NIT y no el contacto (contactos repetidos por la doble carga) |

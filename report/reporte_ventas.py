@@ -4,7 +4,7 @@ from odoo import api, models
 from odoo.exceptions import UserError
 import logging
 
-from .tipos_dte import campos_tipo_dte, codigo_dte
+from .tipos_dte import campos_tipo_dte, codigo_dte, columna_linea
 
 class ReporteVentas(models.AbstractModel):
     _name = 'report.l10n_gt_extra.reporte_ventas'
@@ -37,6 +37,8 @@ class ReporteVentas(models.AbstractModel):
         tiene_fel_nuevo = 'l10n_gt_fel_uuid' in campos_move and 'l10n_gt_fel_serie' in campos_move and 'l10n_gt_fel_numero' in campos_move
         campos_dte = campos_tipo_dte(self.env['account.move'])
         tiene_fel_state = 'l10n_gt_fel_state' in campos_move
+        # gt_bien_servicio (gt_xml_importer): B/S en líneas sin producto de un DTE mezclado
+        tiene_bien_servicio = 'gt_bien_servicio' in self.env['account.move.line']._fields
         tiene_resolucion = 'requiere_resolucion' in campos_diario
 
         if tiene_type:
@@ -142,12 +144,11 @@ class ReporteVentas(models.AbstractModel):
                 if tipo == 'NC':
                     precio = precio * -1
 
-                tipo_linea = f.tipo_gasto or 'mixto'
-                if tipo_linea == 'mixto':
-                    if l.product_id.type != 'service':
-                        tipo_linea = 'compra'
-                    else:
-                        tipo_linea = 'servicio'
+                tipo_linea = columna_linea(
+                    f.tipo_gasto,
+                    l.product_id.type,
+                    l.gt_bien_servicio if tiene_bien_servicio else False,
+                )
 
                 # Siempre enviar cantidad y precio correctos. Por qué algunos impuestos se calculan por cantidades.
                 r = l.tax_ids.compute_all(precio, currency=f.currency_id, quantity=l.quantity, product=l.product_id, partner=f.partner_id)
