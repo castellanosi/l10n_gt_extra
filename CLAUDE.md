@@ -13,7 +13,7 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.63` (nov. 2026; 5.60 en producción desde 09/11/2026). En producción en las 4 bases de
+- **Versión:** `18.0.5.64` (nov. 2026; 5.60 en producción desde 09/11/2026). En producción en las 4 bases de
   SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
@@ -269,8 +269,10 @@ de la factura. Se quitó todo el mecanismo de impuestos de fórmula.
   ni siquiera estaba en el manifest, se eliminó).
 - **Se eliminó el reporte «Retenciones ISR»** (5.62, decisión del
   usuario). No restaurar.
-- «ISR Retención» (impuesto por línea, `base / 1.12`) sigue en la
-  plantilla: no lo usaban los botones. Pendiente decidir si se archiva.
+- «ISR Retención» (impuesto por línea, `base / 1.12`): **fuera de la
+  plantilla desde 5.64** y archivado por migración (decisión del usuario:
+  nadie lo usa; las retenciones van por el botón «Retención»). Las
+  facturas antiguas que lo tengan no cambian. No restaurar.
 
 ### Cuentas por cobrar y por pagar
 - **Antigüedad por documento:** cada factura/NC/pago sin aplicar con su
@@ -479,6 +481,7 @@ eliminó en 5.62).
 
 | Versión | Cambio principal |
 |---|---|
+| 5.64 | Fuera de la plantilla el impuesto «ISR Retención» (fórmula por línea); migración lo archiva en todas las empresas |
 | 5.63 | Libros de compras y ventas: en facturas `mixto`, las líneas sin producto usan `gt_bien_servicio` (B/S) del importador XML para ir a Bienes o Servicios |
 | 5.62 | Retenciones IVA/ISR como pago parcial (botón «Retención» + asistente con diario y monto manual, cuenta del método de pago); libro de compras y estado de cuenta por fecha de la factura; fuera impuestos de fórmula «Retención Global», `hooks.py` y reporte Retenciones ISR |
 | 5.61 | Depurar duplicados: nota con `_message_log` (no exige correo del remitente) |
