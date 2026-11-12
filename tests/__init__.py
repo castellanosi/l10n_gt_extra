@@ -6,3 +6,4 @@ from . import test_flujo_efectivo
 from . import test_conciliacion
 from . import test_duplicados
 from . import test_retencion
+from . import test_columna_linea

@@ -159,3 +159,25 @@ def regimen_en_fecha(historial, regimen_actual, fecha):
             if h.regime:
                 return h.regime
     return regimen_actual or 'GEN'
+
+
+def columna_linea(tipo_gasto, tipo_producto, bien_servicio=False):
+    """Columna del libro (compra / servicio / ...) para una línea de factura.
+
+    tipo_gasto: account.move.tipo_gasto (vacío = 'mixto').
+    tipo_producto: product_id.type de la línea; vacío si no tiene producto.
+    bien_servicio: account.move.line.gt_bien_servicio ('B' / 'S'), que llena
+    gt_xml_importer en las líneas sin producto «(bienes)» / «(servicios)» de
+    un DTE mezclado. Sin ese módulo llega False y el resultado es el de antes.
+
+    Solo decide la línea cuando la factura es 'mixto'. Si la línea tiene
+    producto, el producto manda.
+    """
+    tipo_linea = tipo_gasto or 'mixto'
+    if tipo_linea != 'mixto':
+        return tipo_linea
+    if not tipo_producto and bien_servicio:
+        return 'servicio' if bien_servicio == 'S' else 'compra'
+    if tipo_producto != 'service':
+        return 'compra'
+    return 'servicio'
