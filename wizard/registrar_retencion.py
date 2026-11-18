@@ -154,7 +154,9 @@ class RegistrarRetencionWizard(models.TransientModel):
                 actuales.append(self.numero_constancia)
                 mov.numero_retencion = ', '.join(actuales)
 
-        mov.message_post(body='Retención %s registrada como pago: %s %s (%s).' % (
+        # _message_log: no envía correo ni exige correo del remitente
+        # (message_post falló en producción por eso, 16/11/2026).
+        mov._message_log(body='Retención %s registrada como pago: %s %s (%s).' % (
             NOMBRE_TIPO.get(tipo, ''), mov.currency_id.symbol or '',
             '{:,.2f}'.format(self.monto), ', '.join(pagos.mapped('name'))))
         return {'type': 'ir.actions.act_window_close'}
