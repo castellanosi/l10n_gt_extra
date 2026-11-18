@@ -13,7 +13,7 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.64` (nov. 2026; 5.60 en producción desde 09/11/2026). En producción en las 4 bases de
+- **Versión:** `18.0.5.65` (nov. 2026; 5.60 en producción desde 09/11/2026). En producción en las 4 bases de
   SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
@@ -258,7 +258,27 @@ de la factura. Se quitó todo el mecanismo de impuestos de fórmula.
   2.1.02.05). Sin cuenta, el asistente lo dice y no registra (Odoo 18
   registraría sin asiento). La **cuenta de efectivo** que Odoo exige al
   diario es una cuenta puente tipo «Banco y efectivo» que queda siempre en
-  cero (en `tienda_odoo`: 1.0.02.02 «Puente diarios de retención»).
+  cero (en `tienda_odoo`: 1.0.02.02 «Puente diarios de retención»; desde
+  5.65, «Cuenta transitoria retenciones (no tocar)», ver abajo).
+- **Diarios predeterminados (5.65):** `res.company._l10n_gt_crear_diarios_retencion()`
+  crea la cuenta «Cuenta transitoria retenciones (no tocar)» (tipo Banco y
+  efectivo, código 1.0.01.90 o el siguiente libre) y los diarios RETENCION
+  IVA (`RIVA`) y RETENCION ISR (`RISR`), tipo efectivo, **sin cuentas de
+  pagos entrantes/salientes** (las define el contador; decisión del usuario
+  16/11/2026, «opción A»). Se llama al cargar el plan `gt` en una empresa
+  nueva (`_load` en `models/template_gt_extra.py`) y en la migración 5.65
+  para las existentes. Idempotente: si ya hay diario de ese tipo, no crea
+  otro (p. ej. «Retención IVA/ISR Recibida» de Lorenzo en `conta_gen`).
+- La cuenta se crea **sin** `company_ids` en los valores, con
+  `allowed_company_ids = [empresa]` fijado **dentro** de la función y
+  `with_company(empresa)`: sin eso Odoo 18 la rechazó («debe estar asignada
+  por lo menos a una empresa», 17/11/2026), tanto con `(6, 0, ids)` como
+  llamada sin la empresa activa. Empresas **sin plan contable**
+  (`chart_template` vacío) se saltan: no hay dónde crear la cuenta. La
+  prueba usa una empresa con plan (la empresa por omisión de la prueba en
+  `tienda_odoo` no lo tiene).
+- La nota del asistente va con `_message_log`, no `message_post` (5.65):
+  en producción falló por falta de correo del remitente, igual que 5.61.
 - La constancia se agrega a `numero_retencion` (separadas por coma).
 - Factura menor de Q2,500 con diario de IVA: solo aviso, no bloquea.
 - La migración 5.62 archiva los impuestos «IVA/ISR Retención Global»
@@ -481,6 +501,7 @@ eliminó en 5.62).
 
 | Versión | Cambio principal |
 |---|---|
+| 5.65 | Diarios RETENCION IVA/ISR y «Cuenta transitoria retenciones (no tocar)» predeterminados en cada empresa (nueva y existentes, sin cuentas de pagos); nota del asistente con `_message_log` |
 | 5.64 | Fuera de la plantilla el impuesto «ISR Retención» (fórmula por línea); migración lo archiva en todas las empresas |
 | 5.63 | Libros de compras y ventas: en facturas `mixto`, las líneas sin producto usan `gt_bien_servicio` (B/S) del importador XML para ir a Bienes o Servicios |
 | 5.62 | Retenciones IVA/ISR como pago parcial (botón «Retención» + asistente con diario y monto manual, cuenta del método de pago); libro de compras y estado de cuenta por fecha de la factura; fuera impuestos de fórmula «Retención Global», `hooks.py` y reporte Retenciones ISR |
