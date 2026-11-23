@@ -13,6 +13,21 @@ from .tipos_dte import (
     es_pequenio,
     sin_credito_fiscal,
 )
+from .libro_montos import (
+    CERO,
+    COLUMNAS_COMPRAS,
+    a_float_fila,
+    a_float_totales,
+    acumular_totales,
+    aplicar_dte,
+    dec,
+    fila_vacia,
+    monto_dte,
+    redondear_fila,
+    tipo_cambio_documento,
+    totales_vacios,
+)
+from .libro_control import control_libro, mensajes_control
 
 
 # El libro de compras va por la fecha de la factura (fecha del DTE), no por la
@@ -24,14 +39,8 @@ class ReporteCompras(models.AbstractModel):
     _description = 'Libro de Compras'
 
     def lineas(self, datos):
-        totales = {}
-
-        totales['num_facturas'] = 0
-        totales['compra'] = {'exento':0,'neto':0,'iva':0,'total':0}
-        totales['servicio'] = {'exento':0,'neto':0,'iva':0,'total':0}
-        totales['combustible'] = {'exento':0,'neto':0,'iva':0,'total':0}
-        totales['importacion'] = {'exento':0,'neto':0,'iva':0,'total':0}
-        totales['pequeño'] = {'exento':0,'neto':0,'iva':0,'total':0}
+        columnas = COLUMNAS_COMPRAS
+        totales = totales_vacios(columnas)
 
         journal_ids = [x for x in datos['diarios_id']]
         filtro = [
@@ -57,16 +66,28 @@ class ReporteCompras(models.AbstractModel):
         tiene_fel_state = 'l10n_gt_fel_state' in campos_move
         # gt_bien_servicio (gt_xml_importer): B/S en líneas sin producto de un DTE mezclado
         tiene_bien_servicio = 'gt_bien_servicio' in self.env['account.move.line']._fields
+        # IVA del DTE (importador >= 18.0.1.8.0) y otros impuestos (>= 18.0.1.9.0)
+        tiene_dte = 'gt_dte_iva' in campos_move and 'gt_dte_total' in campos_move
+        tiene_otros = 'gt_dte_otros_impuestos' in campos_move
 
+        tipos = ['in_invoice','in_refund']
         if tiene_type:
-            filtro.append(('type','in',['in_invoice','in_refund']))
+            filtro.append(('type','in',tipos))
         else:
-            filtro.append(('move_type','in',['in_invoice','in_refund']))
+            filtro.append(('move_type','in',tipos))
         
         facturas = self.env['account.move'].search(filtro)
         impuestos = self.env['account.tax'].browse(datos['impuestos_id'])
         impuestos_ids = set(impuestos.ids)
         tasas_por_compania = {}
+
+        info_control = {
+            'ventas': False, 'iva_libro': CERO, 'con_iva': {}, 'vigentes': [],
+            'hallazgos': [], 'dte_usados': 0,
+            'iva_calculado': {}, 'iva_fila': {}, 'numeros': {},
+            'impuestos_ids': list(impuestos_ids), 'diarios_ids': journal_ids,
+            'tipos': tipos, 'fecha_desde': datos['fecha_desde'], 'fecha_hasta': datos['fecha_hasta'],
+        }
 
         lineas = []
         for f in facturas:
@@ -89,10 +110,15 @@ class ReporteCompras(models.AbstractModel):
                     if f.amount_total != 0:
                         tipo_cambio = abs(total / f.amount_total)
 
+            # Libro de varias compañías: tasa entre monedas de compañía. Se
+            # MULTIPLICA por la de la factura (antes la reemplazaba y una
+            # factura en USD de otra compañía perdía su conversión).
+            tasa_compania = 1
             if f.company_id.id != self.env.company.id:
                 if f.company_id.id not in tasas_por_compania:
                     tasas_por_compania[f.company_id.id] = self.env['res.currency']._get_conversion_rate(f.company_id.currency_id, self.env.company.currency_id)
-                tipo_cambio = tasas_por_compania[f.company_id.id]
+                tasa_compania = tasas_por_compania[f.company_id.id]
+                tipo_cambio = tipo_cambio * tasa_compania
 
             tipo_interno_factura = f.type if tiene_type else f.move_type
 
@@ -141,24 +167,17 @@ class ReporteCompras(models.AbstractModel):
                 'fecha': f.invoice_date,
                 'numero': numero,
                 'proveedor': f.partner_id,
-                'compra': 0,
-                'compra_exento': 0,
-                'servicio': 0,
-                'servicio_exento': 0,
-                'combustible': 0,
-                'combustible_exento': 0,
-                'importacion': 0,
-                'importacion_exento': 0,
-                'pequeño': 0,
-                'pequeño_exento': 0,
-                'base': 0,
-                'iva': 0,
-                'total': 0
+                'move_id': f.id,
             }
+            linea.update(fila_vacia(columnas))
 
             if anulada:
                 lineas.append(linea)
                 continue
+
+            info_control['vigentes'].append(f.id)
+            if not sin_credito:
+                info_control['con_iva'][f.id] = tasa_compania
 
             for l in f.invoice_line_ids:
                 precio = ( l.price_unit * (1-(l.discount or 0.0)/100.0) ) * tipo_cambio
@@ -177,42 +196,72 @@ class ReporteCompras(models.AbstractModel):
                 # Siempre enviar cantidad y precio correctos. Por qué algunos impuestos se calculan por cantidades.
                 r = l.tax_ids.compute_all(precio, currency=f.currency_id, quantity=l.quantity, product=l.product_id, partner=f.partner_id)
 
-                linea['base'] += r['total_excluded']
-
                 # Sin crédito fiscal: el monto completo pagado (con cualquier
                 # impuesto que traiga la línea) va a la columna exenta, sin IVA.
                 if sin_credito:
-                    linea[tipo_linea+'_exento'] += r['total_included']
-                    totales[tipo_linea]['exento'] += r['total_included']
-                    totales[tipo_linea]['total'] += r['total_included']
+                    linea[tipo_linea+'_exento'] += dec(r['total_included'])
                     continue
-
-                totales[tipo_linea]['total'] += r['total_excluded']
 
                 # No es exenta si trae el impuesto seleccionado en el wizard
                 if impuestos_ids.intersection(l.tax_ids.ids):
-                    linea[tipo_linea] += r['total_excluded']
-                    totales[tipo_linea]['neto'] += r['total_excluded']
+                    linea[tipo_linea] += dec(r['total_excluded'])
                     for i in r['taxes']:
                         if i['id'] in impuestos_ids:
-                            linea['iva'] += i['amount']
-                            totales[tipo_linea]['iva'] += i['amount']
-                            totales[tipo_linea]['total'] += i['amount']
+                            linea['iva_col'][tipo_linea] += dec(i['amount'])
                         elif (i['amount'] > 0 and not es_nc) or (i['amount'] < 0 and es_nc):
-                            linea[tipo_linea+'_exento'] += i['amount']
-                            totales[tipo_linea]['exento'] += i['amount']
-                            totales[tipo_linea]['total'] += i['amount']
+                            # Impuesto distinto del IVA: «Impuestos y contribuciones» (5.66)
+                            linea['otros'] += dec(i['amount'])
                 else:
-                    linea[tipo_linea+'_exento'] += r['total_excluded']
-                    totales[tipo_linea]['exento'] += r['total_excluded']
+                    linea[tipo_linea+'_exento'] += dec(r['total_excluded'])
 
-            linea['total'] += linea['compra'] + linea['compra_exento'] + linea['servicio'] + linea['servicio_exento'] + linea['combustible'] + linea['combustible_exento'] + linea['importacion'] + linea['importacion_exento'] + linea['pequeño'] + linea['pequeño_exento'] + linea['iva']
+            redondear_fila(linea, columnas)
+            iva_calculado = linea['iva']
+            # En el control va también el número de Odoo: la búsqueda de
+            # facturas no encuentra la serie del DTE.
+            numero_control = numero
+            if f.name and f.name != '/' and f.name not in str(numero):
+                numero_control = '%s (%s)' % (numero, f.name)
 
+            # IVA del DTE: solo con crédito fiscal y si el importador lo llenó
+            # (vigente con total 0 = vacío). Sin crédito fiscal (PEQ, EXE,
+            # RECI...) todo sigue en exento, como siempre.
+            if tiene_dte and f.gt_dte_total and not sin_credito:
+                tc_dte = tipo_cambio_documento(f.amount_total_signed, f.amount_total) if f.currency_id.id != f.company_id.currency_id.id else 1
+                tc_dte = dec(tc_dte) * dec(tasa_compania)
+                signo = -1 if es_nc else 1
+                otros_dte = monto_dte(f.gt_dte_otros_impuestos, tc_dte, signo) if tiene_otros else None
+                hallazgo = aplicar_dte(
+                    linea, columnas,
+                    monto_dte(f.gt_dte_total, tc_dte, signo),
+                    monto_dte(f.gt_dte_iva, tc_dte, signo),
+                    otros_dte,
+                )
+                if hallazgo:
+                    redondear_fila(linea, columnas)
+                    info_control['hallazgos'].append((numero_control, hallazgo))
+                else:
+                    info_control['dte_usados'] += 1
+
+            if f.id in info_control['con_iva']:
+                info_control['iva_calculado'][f.id] = iva_calculado
+                info_control['iva_fila'][f.id] = linea['iva']
+                info_control['numeros'][f.id] = numero_control
+            acumular_totales(totales, linea, columnas)
+            info_control['iva_libro'] += linea['iva']
             lineas.append(linea)
-            
+
         lineas = sorted(lineas, key = lambda i: str(i['fecha']) + str(i['numero']))
 
-        return { 'lineas': lineas, 'totales': totales }
+        for l in lineas:
+            a_float_fila(l, columnas)
+        # Pie «Control» solo si el contador lo pide (casilla del asistente):
+        # el libro oficial se imprime sin él.
+        control = None
+        if datos.get('incluir_control'):
+            control = control_libro(self.env, info_control)
+            control['mensajes'] = mensajes_control(control)
+
+        return { 'lineas': lineas, 'totales': a_float_totales(totales), 'control': control }
 
     @api.model
     def _get_report_values(self, docids, data=None):

@@ -13,7 +13,7 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.65` (nov. 2026; 5.60 en producción desde 09/11/2026). En producción en las 4 bases de
+- **Versión:** `18.0.5.66` (nov. 2026; 5.60 en producción desde 09/11/2026). En producción en las 4 bases de
   SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
@@ -71,10 +71,58 @@ fuera de la lista se ignora y se usa la lógica anterior.
 ## 2. Estado actual de los reportes (v5.50)
 
 ### Libros de ventas y compras
-- **Libro de compras por fecha de la factura** (`invoice_date`, desde
-  5.62; antes por fecha contable `date`). Decisión del usuario: una factura
-  del 30/10 contabilizada el 31/10 sale el 30/10. Ventas no cambia (en
-  ventas ambas fechas coinciden).
+- **Los dos libros van por la fecha del documento** (`invoice_date`):
+  compras desde 5.62, ventas desde 5.66. **Nunca** por fecha contable
+  (`date`) en ningún reporte nuevo: decisión del usuario del 20/11/2026
+  (se registra el 31 una factura del 11 y por `date` el rango 1–11 salía
+  vacío).
+- **IVA del DTE (5.66).** Si el importador está instalado
+  (`gt_dte_iva`, `gt_dte_total` en `_fields`) y la factura vigente tiene
+  `gt_dte_total` ≠ 0, la fila se calcula como siempre y luego
+  `aplicar_dte()` (`report/libro_montos.py`) corrige SOLO la diferencia
+  de IVA (IVA DTE − IVA calculado), restándola de la columna gravada
+  mayor. Si el total de la fila no queda igual al Gran Total del DTE, o la
+  diferencia pasa de Q1.00, la fila queda como se calculó y sale como
+  hallazgo en el pie. **Nunca** base = total − IVA: el Gran Total incluye
+  otros impuestos. En compras no se aplica a documentos sin crédito fiscal
+  (PEQ, EXE, RECI…): siguen todo en exento.
+- **Contrato con el importador** (`odoo_gt_importer`, campos en
+  `account.move`, sin dependencia en el manifiesto): `gt_dte_total`,
+  `gt_dte_iva`, `gt_dte_iva_origen` (≥ 18.0.1.8.0), `gt_dte_otros_impuestos`
+  (≥ 18.0.1.9.0). Siempre positivos; el signo lo da `move_type`. NULL en lo
+  importado antes de esas versiones (el ORM lo lee como 0 = «vacío»).
+- **Impuestos y contribuciones (5.66):** columna nueva en compras y
+  ventas, antes de IVA. Lleva los impuestos de Odoo distintos del IVA
+  elegido (antes iban a exento) y, si el DTE trae
+  `gt_dte_otros_impuestos`, ese monto pasado desde la columna exenta (la
+  línea «Otros impuestos: …» que crea el importador). Fila: total =
+  gravado + exento + impuestos y contribuciones + IVA. La columna «Imp.»
+  de compras es **Importaciones**: su encabezado pasó a «Import.» para no
+  confundirla.
+- **Moneda extranjera (5.66):** los `gt_dte_*` vienen en la moneda de la
+  factura y se convierten con el tipo de cambio **del propio asiento**
+  (`abs(amount_total_signed) / amount_total`), redondeado a 2 decimales
+  por documento. Nunca una tasa aparte. Libro de varias compañías: la tasa
+  entre compañías se MULTIPLICA por la de la factura (antes la reemplazaba).
+- **Decimales (5.66):** todo con `Decimal`; cada monto de la fila se
+  redondea a 2 decimales y los totales son la suma de las filas
+  redondeadas. El Excel (`wizard/libro_excel.py`, común a los dos libros)
+  escribe cada número redondeado con `#,##0.00` y muestra todas las
+  columnas (combustible en ventas).
+- **Pie «Control» (5.66, solo informativo):** sale SOLO si el contador
+  marca la casilla «Incluir control» del asistente (desmarcada por defecto:
+  el libro oficial se imprime sin él; decisión del 23/11/2026). Muestra IVA
+  del libro, IVA contable de esas mismas facturas (líneas de impuesto del
+  IVA elegido, solo documentos con IVA en el libro) y la diferencia
+  separada en dos: **redondeo del IVA de los DTE** (centavos, «se ajusta en
+  la liquidación de IVA») y **otras diferencias** (en rojo, con la lista de
+  documentos cuyo IVA calculado difiere del asiento en más de Q0.05: revisar
+  antes de declarar). Avisos: facturas importadas sin datos del DTE (solo
+  las que llevan IVA; no sale en PEQ/exentos), DTE con IVA de más de 2
+  decimales, borradores del periodo y hallazgos. En el Excel, hoja
+  «Control» con el detalle. **No hay póliza de ajuste** (decisión del
+  20/11/2026).
+- Cada fila lleva `move_id` (lo usan las pruebas; no se imprime).
 - **Tipo:** el código de DTE (`FPEQ`, `NCRE`…) si la factura lo tiene;
   si no, la lógica anterior (`FACT`/`NC`/`ND`). Hay dos variables:
   `tipo` (interna, decide el signo de las NC) y `tipo_mostrar` (lo que
@@ -373,6 +421,13 @@ eliminó en 5.62).
 
 ## 3. Trampas conocidas
 
+- **Los libros RECALCULAN el IVA de cada línea con la configuración ACTUAL
+  del impuesto** (`compute_all`), no leen el asiento. Si se cambia el
+  porcentaje de un impuesto ya usado en facturas publicadas, el libro y la
+  contabilidad dejan de coincidir. Caso real: `tienda_odoo`, INV/2026/00012
+  (DTE 5E46F7CF), publicada con «PEQ» al 12 % incluido; luego PEQ pasó a
+  0 %: libro IVA 0.00, asiento 53.57. El pie «Control» (casilla) lo lista
+  en «Otras diferencias», con el número del DTE y el de Odoo.
 - **`data_report_page_offset` no existe en Odoo 18**: no hace nada. El
   folio va con `span.l10n_gt_folio` + `data-folio-inicial`.
 - **`web.basic_layout` NO se usa dentro de `web.html_container`**: lo
@@ -484,10 +539,23 @@ eliminó en 5.62).
 
 ## 5. Pendientes
 
+- **Buscar facturas por serie, número o UUID del DTE**: la barra de búsqueda
+  de facturas no los encuentra (busca nombre, referencia y cliente). Va en
+  los módulos dueños de esos campos, NO aquí: `odoo_fel_integrador`
+  (`l10n_gt_fel_serie`, `l10n_gt_fel_numero`, `l10n_gt_fel_uuid`) y
+  `gt_mass_importer` (`firma_fel`, `serie_fel`, `numero_fel`). Mientras
+  tanto: filtro personalizado «Serie DTE / Serie FEL contiene …», guardado
+  en Favoritos.
 - **Libro de bancos e impresión de partida** no tienen folio (su
   asistente no tiene el campo). Si se piden, agregar `folio_inicial` y
   usar el encabezado común.
-- **Cruce con la SAT** (propuesto, no iniciado): asistente que lea el
+- **5.67 — Asistente «Conciliar ventas con SAT»** (siguiente paquete):
+  hojas electrónicas de la SAT (.xls/.xlsx, varias por mes) contra el
+  libro, por UUID, tipos 1–6 (ver traspaso). Regla: **no se declara el mes
+  mientras el asistente muestre diferencias**. `xlrd 2.0.1` y `openpyxl`
+  confirmados en el contenedor de `tienda-odoo`; confirmar en producción
+  antes de subir.
+- **Cruce con la SAT de compras** (propuesto, no iniciado): asistente que lea el
   Excel de DTE emitidos/recibidos del portal SAT y marque en Odoo los
   anulados. Hace falta un Excel de ejemplo y saber qué módulo importa
   los XML de compras (el importador actual no detecta anulaciones: el
@@ -501,6 +569,7 @@ eliminó en 5.62).
 
 | Versión | Cambio principal |
 |---|---|
+| 5.66 | Libros de compras y ventas: IVA del DTE (`gt_dte_*` del importador) corrigiendo solo la diferencia de IVA; columna «Impuestos y contribuciones»; montos del DTE en USD con el tipo de cambio del asiento; ventas por `invoice_date`; 2 decimales con `Decimal`; Excel con todas las columnas; pie «Control» opcional (casilla, redondeo DTE separado de otras diferencias); «Imp.» → «Import.» |
 | 5.65 | Diarios RETENCION IVA/ISR y «Cuenta transitoria retenciones (no tocar)» predeterminados en cada empresa (nueva y existentes, sin cuentas de pagos); nota del asistente con `_message_log` |
 | 5.64 | Fuera de la plantilla el impuesto «ISR Retención» (fórmula por línea); migración lo archiva en todas las empresas |
 | 5.63 | Libros de compras y ventas: en facturas `mixto`, las líneas sin producto usan `gt_bien_servicio` (B/S) del importador XML para ir a Bienes o Servicios |

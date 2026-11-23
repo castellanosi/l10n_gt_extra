@@ -13,6 +13,7 @@
                         <field name="fecha_desde"/>
                         <field name="fecha_hasta"/>
                         <field name="resumido"/>
+                        <field name="incluir_control"/>
                     </group>
                     <group>
                         <field name="impuestos_id" domain="[('type_tax_use','in',['sale'])]" widget="many2many_tags"/>
