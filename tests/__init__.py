@@ -7,3 +7,5 @@ from . import test_conciliacion
 from . import test_duplicados
 from . import test_retencion
 from . import test_columna_linea
+from . import test_libro_montos
+from . import test_libro_ventas_dte
