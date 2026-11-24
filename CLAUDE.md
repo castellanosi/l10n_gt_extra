@@ -13,7 +13,7 @@ Extensión de la localización oficial de Guatemala (`l10n_gt`) para
 Odoo 18/19 CE: reportes SAT (libros), estados financieros, CxC/CxP,
 estado de cuenta, retenciones y conciliación bancaria.
 
-- **Versión:** `18.0.5.66` (nov. 2026; 5.60 en producción desde 09/11/2026). En producción en las 4 bases de
+- **Versión:** `18.0.5.66` (en producción desde 23/11/2026, tag `v18.0.5.66`; probada con Super Mas & Ahorro oct. 2026: IVA 37,904.74 = hoja SAT). En producción en las 4 bases de
   SOLUCONTA (`conta_exlin`, `conta_gen`, `conta_ic`, `conta_mlopez`).
 - **Ramas:** `18.0` (estable), `test` (pruebas), `19.0`. Flujo:
   `feature/* → test → 18.0`, con tag de versión al llevar a `18.0`.
@@ -549,12 +549,18 @@ eliminó en 5.62).
 - **Libro de bancos e impresión de partida** no tienen folio (su
   asistente no tiene el campo). Si se piden, agregar `folio_inicial` y
   usar el encabezado común.
-- **5.67 — Asistente «Conciliar ventas con SAT»** (siguiente paquete):
-  hojas electrónicas de la SAT (.xls/.xlsx, varias por mes) contra el
-  libro, por UUID, tipos 1–6 (ver traspaso). Regla: **no se declara el mes
-  mientras el asistente muestre diferencias**. `xlrd 2.0.1` y `openpyxl`
-  confirmados en el contenedor de `tienda-odoo`; confirmar en producción
-  antes de subir.
+- **Conciliación con las hojas de la SAT: NO va en este repo** (decisión
+  del 23/11/2026). La «Revisión IVA DTE» de `odoo_gt_importer` ya compara
+  total e IVA del DTE contra Odoo y genera el reporte (.txt/.csv). Lo que
+  falta (DTE de la hoja que no están en Odoo, facturas importadas que no
+  vienen en la hoja, anulado en un lado y vigente en el otro, resumir el
+  redondeo de centavos) se pide en el chat del importador. Aquí no se
+  duplica.
+- Texto del pie «Control»: dice «en 1 documentos» (falta singular).
+  Corregir en la próxima entrega de código; no amerita versión propia.
+- Regla de trabajo: producción se actualiza solo cuando haya un cambio de
+  código que lo requiera. Cambios solo de documentación quedan en `test` y
+  `18.0` sin actualizar las bases.
 - **Cruce con la SAT de compras** (propuesto, no iniciado): asistente que lea el
   Excel de DTE emitidos/recibidos del portal SAT y marque en Odoo los
   anulados. Hace falta un Excel de ejemplo y saber qué módulo importa
